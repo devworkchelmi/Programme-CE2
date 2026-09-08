@@ -1,0 +1,25 @@
+{
+    "name": "carnet-ce2",
+    "version": "1.0.0",
+    "private": true,
+    "devDependencies": {
+        "@hotwired/stimulus": "^3.2.2",
+        "@symfony/stimulus-bridge": "^4.0.0",
+        "@symfony/webpack-encore": "^5.0.0",
+        "core-js": "^3.38.0",
+        "sass": "^1.79.0",
+        "sass-loader": "^16.0.0",
+        "webpack": "^5.94.0",
+        "webpack-cli": "^5.1.4",
+        "webpack-notifier": "^1.15.0"
+    },
+    "dependencies": {
+        "bootstrap": "^5.3.3"
+    },
+    "scripts": {
+        "dev-server": "encore dev-server",
+        "dev": "encore dev",
+        "watch": "encore dev --watch",
+        "build": "encore production --progress"
+    }
+}

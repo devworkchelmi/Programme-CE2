@@ -1,0 +1,38 @@
+parameters:
+    # Modèle Claude utilisé pour les 3 appels LLM (cf. architecture technique §1)
+    app.default_llm_model: 'claude-sonnet-5'
+
+    # Repère de vocabulaire (échelle inspirée Dubois-Buyse) par niveau, du plus simple (1) au plus riche (6)
+    # Utilisé par les services de génération LLM pour calibrer texte et feedback (cf. Validation/Recherche §2)
+    app.niveau_vocabulaire:
+        1: 'échelons 1 à 4 (mots très fréquents, phrases courtes ~6-8 mots)'
+        2: 'échelons 3 à 6'
+        3: 'échelons 5 à 9 (niveau CE2 courant)'
+        4: 'échelons 7 à 11'
+        5: 'échelons 9 à 13'
+        6: 'échelons 11 à 15 (vocabulaire plus riche, phrases ~14-16 mots)'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    App\Service\Llm\ClaudeClient:
+        arguments:
+            $apiKey: '%env(ANTHROPIC_API_KEY)%'
+            $model: '%app.default_llm_model%'
+
+    App\Service\Llm\TexteGenerationService:
+        arguments:
+            $niveauVocabulaire: '%app.niveau_vocabulaire%'
+
+    App\Service\Llm\FeedbackService:
+        arguments:
+            $niveauVocabulaire: '%app.niveau_vocabulaire%'
