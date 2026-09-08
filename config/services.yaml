@@ -29,6 +29,15 @@ services:
             $apiKey: '%env(ANTHROPIC_API_KEY)%'
             $model: '%app.default_llm_model%'
 
+    # Mode démo (APP_LLM_FAKE=1 dans .env.local) : bascule les 3 appels LLM sur des
+    # réponses fabriquées localement, sans consommer de crédit API (cf. README).
+    App\Service\Llm\ClaudeClientFactory:
+        arguments:
+            $modeDemo: '%env(bool:APP_LLM_FAKE)%'
+
+    App\Service\Llm\ClaudeClientInterface:
+        factory: ['@App\Service\Llm\ClaudeClientFactory', 'creer']
+
     App\Service\Llm\TexteGenerationService:
         arguments:
             $niveauVocabulaire: '%app.niveau_vocabulaire%'

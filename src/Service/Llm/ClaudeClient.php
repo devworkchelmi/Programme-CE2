@@ -13,7 +13,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * pour garantir une réponse JSON valide plutôt que de parser du texte libre
  * (cf. architecture technique §1 — vérifié dans la doc Claude Developer Platform).
  */
-class ClaudeClient
+class ClaudeClient implements ClaudeClientInterface
 {
     private const API_URL = 'https://api.anthropic.com/v1/messages';
     private const ANTHROPIC_VERSION = '2023-06-01';

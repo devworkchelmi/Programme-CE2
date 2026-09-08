@@ -11,7 +11,7 @@ namespace App\Service\Llm;
  */
 class AnalyseReponseService
 {
-    public function __construct(private readonly ClaudeClient $claudeClient)
+    public function __construct(private readonly ClaudeClientInterface $claudeClient)
     {
     }
 

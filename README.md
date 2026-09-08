@@ -46,6 +46,30 @@ npm run watch
 L'app est ensuite disponible sur http://localhost:8000 (connexion avec le compte
 adulte créé à l'étape 5).
 
+## Mode démo (sans appel API, sans crédit consommé)
+
+Pour dérouler tout le parcours — diagnostic initial, relecture, réponses de l'enfant,
+feedback, ajustement de niveau — sans appeler l'API Claude (utile quand le compte n'a
+plus de crédit, ou pour développer l'interface sans coût) :
+
+```bash
+# dans .env.local
+APP_LLM_FAKE=1
+```
+
+puis `docker compose exec php bin/console cache:clear`.
+
+Un bandeau « Mode démo » s'affiche alors sur toutes les pages, et les titres des textes
+générés sont préfixés `[DÉMO]` — impossible de confondre avec du contenu réel.
+
+`FakeClaudeClient` n'est pas un bouchon aléatoire : l'analyse des réponses compare
+réellement ce que l'enfant écrit à la réponse attendue (recoupement de mots
+significatifs). Répondre juste fait monter le niveau, répondre à côté le fait baisser —
+les règles de diagnostic (§4) et d'ajustement (§5) restent donc testables pour de vrai.
+
+Repasser en réel : `APP_LLM_FAKE=0` dans `.env.local` (ou supprimer la ligne), puis
+vider le cache.
+
 ## Tests
 
 ```bash
@@ -86,3 +110,7 @@ Ils ne nécessitent pas de base de données.
   `adulte/suivi.html.twig`, route `POST /adulte/reponse/{id}/confirmer-erreur`.
 - Timeout nginx relevé à 180s (`docker/nginx/default.conf`) : le lot de diagnostic
   enchaîne plusieurs appels Claude séquentiels, au-delà du défaut de 60s dans le pire cas.
+- Mode démo (`APP_LLM_FAKE`) : `ClaudeClientInterface` + `FakeClaudeClient` +
+  `ClaudeClientFactory`, pour tout tester sans appel API (voir section dédiée plus haut).
+- `ClaudeClient` remonte désormais le message d'erreur exact de l'API Anthropic au lieu
+  du seul code HTTP (le schéma JSON n'accepte notamment ni `minItems` ni `maxItems`).

@@ -83,6 +83,12 @@
 </div>
 
 <div class="container">
+    {% if llm_mode_demo %}
+        <div class="flash" style="background: oklch(95% 0.05 75); border:1px solid var(--amber); display:flex; gap:8px; align-items:center;">
+            <strong>Mode démo</strong> — les textes, analyses et feedbacks sont fabriqués localement, sans appel à l'API Claude.
+        </div>
+    {% endif %}
+
     {% for label, messages in app.flashes %}
         {% for message in messages %}
             <div class="flash flash-{{ label }}">{{ message }}</div>

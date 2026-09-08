@@ -14,7 +14,7 @@ class TexteGenerationService
      * @param array<int, string> $niveauVocabulaire repère de vocabulaire par niveau (config/services.yaml)
      */
     public function __construct(
-        private readonly ClaudeClient $claudeClient,
+        private readonly ClaudeClientInterface $claudeClient,
         private readonly array $niveauVocabulaire,
     ) {
     }
