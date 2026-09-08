@@ -2,12 +2,19 @@
 
 namespace App\Controller;
 
+use App\Entity\AjustementNiveau;
+use App\Entity\Enfant;
 use App\Entity\Enum\Correction;
 use App\Entity\Enum\StatutSession;
 use App\Entity\Enum\TypeErreur;
+use App\Entity\Enum\TypeSession;
 use App\Entity\Feedback;
 use App\Entity\Reponse;
+use App\Entity\Session;
 use App\Repository\SessionRepository;
+use App\Service\AjustementService;
+use App\Service\DiagnosticService;
+use App\Service\Dto\ResultatTexteDiagnostic;
 use App\Service\Llm\AnalyseReponseService;
 use App\Service\Llm\FeedbackService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,9 +42,21 @@ class EnfantController extends AbstractController
             throw $this->createNotFoundException('Ce texte de diagnostic n\'est pas encore disponible.');
         }
 
+        // Barre de progression (cf. Product Specification §2.1) : où on en est dans le lot.
+        $sessionsDiagnostic = $sessionRepository->sessionsDiagnostic($session->getEnfant());
+        $position = 1;
+        foreach ($sessionsDiagnostic as $index => $sessionDuLot) {
+            if ($sessionDuLot->getId() === $session->getId()) {
+                $position = $index + 1;
+                break;
+            }
+        }
+
         return $this->render('enfant/diagnostic.html.twig', [
             'session' => $session,
             'texte' => $session->getTexteGenere(),
+            'position' => $position,
+            'total' => count($sessionsDiagnostic),
         ]);
     }
 
@@ -64,6 +83,8 @@ class EnfantController extends AbstractController
         SessionRepository $sessionRepository,
         AnalyseReponseService $analyseReponseService,
         FeedbackService $feedbackService,
+        AjustementService $ajustementService,
+        DiagnosticService $diagnosticService,
         EntityManagerInterface $em,
     ): Response {
         $session = $sessionRepository->find($id);
@@ -113,10 +134,27 @@ class EnfantController extends AbstractController
         }
 
         $session->setStatut(StatutSession::JOUEE);
+        // Flush immédiat : la suite (diagnostic ou ajustement) a besoin de relire l'état
+        // à jour des sessions en base (cf. les deux branches ci-dessous).
         $em->flush();
 
-        // TODO (jour 9-10) : déclencher ici AjustementService::calculer() pour préparer
-        // le niveau de la session suivante, et persister l'AjustementNiveau correspondant.
+        $enfant = $session->getEnfant();
+
+        if (TypeSession::DIAGNOSTIC === $session->getType()) {
+            $this->finaliserEtapeDiagnostic($session, $enfant, $sessionRepository, $ajustementService, $diagnosticService, $em);
+        } else {
+            $this->appliquerAjustement($session, $enfant, $sessionRepository, $ajustementService, $em);
+        }
+
+        // Diagnostic en cours et texte suivant déjà validé : on enchaîne directement
+        // dessus plutôt que de repasser par l'écran de feedback (cf. Product
+        // Specification §2.1 — "répondre, continuer").
+        if (TypeSession::DIAGNOSTIC === $session->getType() && !$enfant->isDiagnosticTermine()) {
+            $prochain = $this->prochainTexteDiagnostic($enfant, $sessionRepository);
+            if (null !== $prochain) {
+                return $this->redirectToRoute('enfant_diagnostic', ['id' => $prochain->getId()]);
+            }
+        }
 
         return $this->redirectToRoute('enfant_feedback', ['id' => $id]);
     }
@@ -133,7 +171,88 @@ class EnfantController extends AbstractController
         return $this->render('enfant/feedback.html.twig', [
             'session' => $session,
             'texte' => $session->getTexteGenere(),
+            'enfant' => $session->getEnfant(),
         ]);
     }
 
+    /**
+     * Cf. Product Specification §4 : une fois qu'au moins 2 textes du lot de diagnostic
+     * ont été joués, on peut calculer un niveau de départ ; on ne l'applique et on ne
+     * marque le diagnostic terminé que lorsque tout le lot a été joué.
+     */
+    private function finaliserEtapeDiagnostic(
+        Session $session,
+        Enfant $enfant,
+        SessionRepository $sessionRepository,
+        AjustementService $ajustementService,
+        DiagnosticService $diagnosticService,
+        EntityManagerInterface $em,
+    ): void {
+        $sessionsDiagnostic = $sessionRepository->sessionsDiagnostic($enfant);
+        $sessionsJouees = array_values(array_filter(
+            $sessionsDiagnostic,
+            static fn (Session $s) => StatutSession::JOUEE === $s->getStatut(),
+        ));
+
+        $resultats = array_map(
+            static fn (Session $s) => new ResultatTexteDiagnostic($s->getNiveauVise(), $ajustementService->tauxReussite($s)),
+            $sessionsJouees,
+        );
+
+        $niveauDepart = $diagnosticService->calculerNiveauDepart($resultats);
+
+        if (null !== $niveauDepart && count($sessionsJouees) === count($sessionsDiagnostic)) {
+            $enfant->setNiveauActuel($niveauDepart);
+            $enfant->setDiagnosticTermine(true);
+            $em->flush();
+        }
+    }
+
+    /**
+     * Ajustement de niveau (cf. Product Specification §5) pour une session standard.
+     */
+    private function appliquerAjustement(
+        Session $session,
+        Enfant $enfant,
+        SessionRepository $sessionRepository,
+        AjustementService $ajustementService,
+        EntityManagerInterface $em,
+    ): void {
+        $tauxReussiteRecents = [$ajustementService->tauxReussite($session)];
+
+        foreach ($sessionRepository->lesPlusRecentesJouees($enfant, 2) as $sessionRecente) {
+            if ($sessionRecente->getId() === $session->getId()) {
+                continue;
+            }
+            $tauxReussiteRecents[] = $ajustementService->tauxReussite($sessionRecente);
+            if (count($tauxReussiteRecents) >= 2) {
+                break;
+            }
+        }
+
+        $resultat = $ajustementService->calculer($enfant->getNiveauActuel(), $tauxReussiteRecents);
+
+        $ajustementNiveau = new AjustementNiveau($resultat->niveauAvant, $resultat->niveauApres, $resultat->regleAppliquee);
+        $session->setAjustementNiveau($ajustementNiveau);
+        $em->persist($ajustementNiveau);
+
+        $enfant->setNiveauActuel($resultat->niveauApres);
+
+        $em->flush();
+    }
+
+    /**
+     * Premier texte du lot de diagnostic déjà validé par l'adulte mais pas encore joué —
+     * cf. cas limite "reprise au texte suivant" (Product Specification §2.1).
+     */
+    private function prochainTexteDiagnostic(Enfant $enfant, SessionRepository $sessionRepository): ?Session
+    {
+        foreach ($sessionRepository->sessionsDiagnostic($enfant) as $session) {
+            if (StatutSession::VALIDEE === $session->getStatut()) {
+                return $session;
+            }
+        }
+
+        return null;
+    }
 }

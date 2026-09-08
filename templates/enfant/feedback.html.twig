@@ -4,6 +4,17 @@
 
 {% block body %}
     <div style="display:flex; flex-direction:column; gap:20px;">
+        {% if session.type.value == 'diagnostic' and enfant is defined and enfant and enfant.diagnosticTermine %}
+            <div class="card" style="border-color: var(--success); background: oklch(95% 0.03 148); text-align:center;">
+                <div style="font-family:'Baloo 2'; font-size:20px; margin-bottom:6px;">🎉 Diagnostic terminé&nbsp;!</div>
+                <p style="margin:0;">Merci d'avoir répondu à tous les textes. On sait maintenant où commencer&nbsp;!</p>
+            </div>
+        {% elseif session.type.value == 'diagnostic' %}
+            <div class="card" style="border-style:dashed; text-align:center;">
+                <p style="margin:0;">Bien joué&nbsp;! Il reste encore un ou deux textes de diagnostic — demande à un adulte de continuer bientôt.</p>
+            </div>
+        {% endif %}
+
         <h1 style="font-size:23px; margin:0;">Bien joué pour cet exercice&nbsp;!</h1>
 
         {% for question in texte.questions %}

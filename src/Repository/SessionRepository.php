@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Enfant;
+use App\Entity\Enum\TypeSession;
 use App\Entity\Session;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -50,6 +51,26 @@ class SessionRepository extends ServiceEntityRepository
             ->setParameter('enfant', $enfant)
             ->orderBy('s.date', 'DESC')
             ->setMaxResults($limite)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Toutes les sessions de diagnostic d'un enfant, triées par niveau visé croissant —
+     * reflète l'ordre de complexité croissante du diagnostic initial (cf. Product
+     * Specification §4). Utilisé pour savoir où en est le lot et calculer le niveau
+     * de départ une fois suffisamment de textes joués.
+     *
+     * @return list<Session>
+     */
+    public function sessionsDiagnostic(Enfant $enfant): array
+    {
+        return $this->createQueryBuilder('s')
+            ->andWhere('s.enfant = :enfant')
+            ->andWhere('s.type = :type')
+            ->setParameter('enfant', $enfant)
+            ->setParameter('type', TypeSession::DIAGNOSTIC)
+            ->orderBy('s.niveauVise', 'ASC')
             ->getQuery()
             ->getResult();
     }

@@ -8,6 +8,13 @@
 /vendor/
 ###< symfony/framework-bundle ###
 
+# Filet de sécurité : un .env.local ne doit jamais être suivi, où qu'il atterrisse dans
+# l'arborescence (ex. créé par erreur dans un sous-dossier) — les motifs préfixés "/"
+# ci-dessus ne couvrent que la racine.
+**/.env.local
+**/.env.local.php
+**/.env.*.local
+
 ###> symfony/webpack-encore-bundle ###
 /node_modules/
 /public/build/

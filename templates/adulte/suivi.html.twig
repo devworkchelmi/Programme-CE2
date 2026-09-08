@@ -21,6 +21,11 @@
             <form method="post" action="{{ path('adulte_session_demarrer') }}">
                 <button class="btn" type="submit">+ Nouvelle session</button>
             </form>
+            {% if not enfant.diagnosticTermine %}
+                <div style="font-size:12.5px; color:var(--ink-soft);">
+                    Diagnostic initial pas encore terminé — le prochain clic génère (ou continue) le lot de textes de diagnostic.
+                </div>
+            {% endif %}
         {% endif %}
 
         {% if enfant and sessions is empty %}
@@ -32,36 +37,64 @@
                     <div style="font-family:'Baloo 2'; font-size:26px; margin-top:6px;">{{ enfant.niveauActuel }} / 6</div>
                 </div>
                 <div class="card" style="flex:1;">
-                    <div style="font-size:12px; color:var(--ink-soft); font-weight:700;">Sessions récentes</div>
+                    <div style="font-size:12px; color:var(--ink-soft); font-weight:700;">Sessions jouées</div>
                     <div style="font-family:'Baloo 2'; font-size:26px; margin-top:6px;">{{ sessions|length }}</div>
                 </div>
             </div>
+
+            {% if reponsesAConfirmer is defined and reponsesAConfirmer is not empty %}
+                <div class="card">
+                    <div style="font-family:'Baloo 2'; font-size:16px; margin-bottom:4px;">Types d'erreur à confirmer</div>
+                    <p style="font-size:12.5px; color:var(--ink-soft); margin-top:0; margin-bottom:14px;">
+                        Proposés par l'IA à partir des réponses de l'enfant — reste une suggestion tant que tu ne l'as pas confirmée (cf. Product Specification §2.5).
+                    </p>
+                    {% for reponse in reponsesAConfirmer %}
+                        {% set libelles = {'lecture_attention': 'Lecture / attention', 'litterale': 'Littérale', 'inference': 'Inférence'} %}
+                        <div style="padding:12px 0; border-bottom:1px solid var(--border);">
+                            <div style="font-weight:700; margin-bottom:4px;">{{ reponse.question.enonce }}</div>
+                            <div style="font-size:13px; color:var(--ink-soft); margin-bottom:10px;">Réponse donnée : « {{ reponse.contenuEnfant }} »</div>
+                            <form method="post" action="{{ path('adulte_reponse_confirmer_erreur', {id: reponse.id}) }}" style="display:flex; gap:14px; align-items:center; flex-wrap:wrap; font-size:13px;">
+                                {% for valeur, libelle in libelles %}
+                                    <label style="display:flex; align-items:center; gap:6px; font-weight:normal;">
+                                        <input type="radio" name="type_erreur" value="{{ valeur }}" {{ reponse.typeErreurPropose and reponse.typeErreurPropose.value == valeur ? 'checked' : '' }}>
+                                        {{ libelle }}
+                                    </label>
+                                {% endfor %}
+                                <button class="btn btn-outline btn-sm" type="submit">Confirmer</button>
+                            </form>
+                            <div style="font-size:11.5px; color:var(--ink-soft); margin-top:6px;">
+                                Proposition de l'IA : {{ reponse.typeErreurPropose ? libelles[reponse.typeErreurPropose.value] : '—' }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
 
             <div class="card">
                 <div style="font-family:'Baloo 2'; font-size:16px; margin-bottom:12px;">Sessions récentes</div>
                 <table style="width:100%; border-collapse:collapse;">
                     <tr style="text-align:left; font-size:11.5px; text-transform:uppercase; color:var(--ink-soft);">
                         <th style="padding:8px 6px; border-bottom:1px solid var(--border);">Date</th>
+                        <th style="padding:8px 6px; border-bottom:1px solid var(--border);">Type</th>
                         <th style="padding:8px 6px; border-bottom:1px solid var(--border);">Texte</th>
                         <th style="padding:8px 6px; border-bottom:1px solid var(--border);">Statut</th>
                     </tr>
                     {% for session in sessions %}
                         <tr>
                             <td style="padding:10px 6px; border-bottom:1px solid var(--border);">{{ session.date|date('d/m/Y') }}</td>
+                            <td style="padding:10px 6px; border-bottom:1px solid var(--border);">{{ session.type.value == 'diagnostic' ? 'Diagnostic' : 'Standard' }}</td>
                             <td style="padding:10px 6px; border-bottom:1px solid var(--border);">{{ session.texteGenere ? session.texteGenere.titre : '—' }}</td>
                             <td style="padding:10px 6px; border-bottom:1px solid var(--border);">
                                 {{ session.statut.value }}
                                 {% if session.statut.value == 'en_attente_relecture' %}
                                     — <a href="{{ path('adulte_relecture', {id: session.id}) }}">à relire</a>
+                                {% elseif session.statut.value == 'validee' %}
+                                    — <a href="{{ path(session.type.value == 'diagnostic' ? 'enfant_diagnostic' : 'enfant_exercice', {id: session.id}) }}">faire l'exercice</a>
                                 {% endif %}
                             </td>
                         </tr>
                     {% endfor %}
                 </table>
-                <p style="font-size:12px; color:var(--ink-soft); margin-top:10px;">
-                    Le type d'erreur détecté par l'IA reste « à confirmer » tant qu'il n'a pas été validé ici
-                    (TODO jour 11-12 : ajouter la colonne et l'action de confirmation, cf. Product Specification §2.5).
-                </p>
             </div>
         {% endif %}
     </div>

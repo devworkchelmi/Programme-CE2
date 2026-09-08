@@ -60,12 +60,29 @@ Ils ne nécessitent pas de base de données.
 
 ## Ce qui reste à faire (cf. architecture technique §4, jours 3-14)
 
-- Créer le flux qui génère automatiquement une nouvelle session (diagnostic ou
-  standard) — pour l'instant les sessions doivent être créées à la main ou via
-  une commande à écrire.
-- Écran de diagnostic initial multi-textes (actuellement une seule session à la fois).
-- Brancher `AjustementService::calculer()` dans `EnfantController::repondre()`
-  (le TODO est en place) et persister l'`AjustementNiveau` résultant.
-- Écran de confirmation du type d'erreur côté suivi adulte (§2.5).
 - Remplacer les questions existantes lors d'une régénération de texte (`AdulteController::regenerer`).
 - Charte visuelle : reprendre plus finement le canevas de design (`01-parcours-produit-maquettes.html`).
+- Sélection réelle de l'enfant (actuellement le premier trouvé — cf. TODO jour 11-12
+  dans `AdulteController::suivi()`).
+- Édition inline d'un texte généré côté relecture (pour l'instant : valider ou régénérer
+  seulement, pas de modification directe — cf. Product Specification §2.4).
+
+## Fait depuis le scaffold initial
+
+- Flux de démarrage de session (`POST /adulte/session/demarrer`) : génère un texte +
+  des questions via Claude et envoie en relecture avant de le proposer à l'enfant.
+- Navbar dans `base.html.twig` (suivi, déconnexion, email de l'adulte connecté).
+- « Se souvenir de moi » sur la connexion (`remember_me` dans security.yaml).
+- `AjustementService::calculer()` branché dans `EnfantController::repondre()` pour les
+  sessions standard : niveau de l'enfant et historique (`AjustementNiveau`) mis à jour
+  après chaque session jouée.
+- Diagnostic initial multi-textes (§2.1 et §4) : `AdulteController::demarrerSession()`
+  génère un lot de 3 textes de complexité croissante (niveaux 1, 3, 5), l'enfant les
+  enchaîne via `EnfantController` (barre de progression, reprise au texte suivant déjà
+  validé), et `DiagnosticService::calculerNiveauDepart()` fixe `Enfant.niveauActuel` +
+  `diagnosticTermine` une fois tout le lot joué. Nouvelle colonne `Enfant.diagnostic_termine`
+  (migration `Version20260908131936`).
+- Confirmation du type d'erreur côté suivi adulte (§2.5) : section dédiée sur
+  `adulte/suivi.html.twig`, route `POST /adulte/reponse/{id}/confirmer-erreur`.
+- Timeout nginx relevé à 180s (`docker/nginx/default.conf`) : le lot de diagnostic
+  enchaîne plusieurs appels Claude séquentiels, au-delà du défaut de 60s dans le pire cas.

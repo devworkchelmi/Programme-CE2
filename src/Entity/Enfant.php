@@ -25,6 +25,14 @@ class Enfant
     #[ORM\Column]
     private int $niveauActuel = 1;
 
+    /**
+     * Passe à true une fois le diagnostic initial terminé (cf. Product Specification §4) —
+     * tant que c'est false, AdulteController::demarrerSession() propose le lot de textes
+     * de diagnostic plutôt qu'une session standard.
+     */
+    #[ORM\Column]
+    private bool $diagnosticTermine = false;
+
     #[ORM\Column]
     private \DateTimeImmutable $dateCreation;
 
@@ -64,6 +72,18 @@ class Enfant
     public function setNiveauActuel(int $niveauActuel): static
     {
         $this->niveauActuel = max(1, min(6, $niveauActuel));
+
+        return $this;
+    }
+
+    public function isDiagnosticTermine(): bool
+    {
+        return $this->diagnosticTermine;
+    }
+
+    public function setDiagnosticTermine(bool $diagnosticTermine): static
+    {
+        $this->diagnosticTermine = $diagnosticTermine;
 
         return $this;
     }
