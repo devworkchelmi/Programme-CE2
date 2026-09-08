@@ -2,6 +2,7 @@
 
 namespace App\Service\Llm;
 
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -58,7 +59,16 @@ class ClaudeClient
             ],
         ]);
 
-        $donnees = $response->toArray();
+        try {
+            $donnees = $response->toArray();
+        } catch (HttpExceptionInterface $e) {
+            // Le corps de la réponse contient le message d'erreur exact d'Anthropic
+            // (bien plus utile que le simple code HTTP pour déboguer, cf. README).
+            $corps = $response->getContent(false);
+
+            throw new \RuntimeException(sprintf('Erreur API Claude (%s) : %s', $e->getMessage(), $corps), previous: $e);
+        }
+
         $texte = $donnees['content'][0]['text'] ?? null;
 
         if (null === $texte) {

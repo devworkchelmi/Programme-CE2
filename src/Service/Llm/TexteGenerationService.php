@@ -59,8 +59,10 @@ class TexteGenerationService
                 'texte' => ['type' => 'string'],
                 'questions' => [
                     'type' => 'array',
-                    'minItems' => 1,
-                    'maxItems' => 2,
+                    // minItems/maxItems non supportés par l'API pour les sorties structurées
+                    // (cf. doc Claude Developer Platform) — la contrainte "1 à 2 questions" est
+                    // donc portée par le prompt uniquement, pas par le schéma.
+                    'description' => 'Toujours 1 ou 2 questions, jamais plus, jamais zéro.',
                     'items' => [
                         'type' => 'object',
                         'properties' => [
