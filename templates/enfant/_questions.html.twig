@@ -71,6 +71,14 @@
         formulaire.addEventListener('input', function () { aCommence = true; rafraichir(); });
         formulaire.addEventListener('change', function () { aCommence = true; rafraichir(); });
 
+        // Un double-clic enverrait deux fois le formulaire — et la seconde soumission
+        // tenterait d'enregistrer une réponse déjà existante. Le contrôleur s'en protège
+        // aussi, mais autant éviter l'aller-retour inutile et rassurer l'enfant.
+        formulaire.addEventListener('submit', function () {
+            bouton.disabled = true;
+            bouton.textContent = 'Un instant…';
+        });
+
         rafraichir();
     })();
 </script>

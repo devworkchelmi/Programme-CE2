@@ -94,9 +94,23 @@ class EnfantController extends AbstractController
             throw $this->createNotFoundException();
         }
 
+        // Règle "un seul essai par question" (cf. Product Specification §2.2) : une session
+        // déjà jouée ne se rejoue pas. Sans cette garde, un retour arrière du navigateur
+        // suivi d'une re-validation, ou un double-clic sur le bouton, tentait d'insérer
+        // une seconde Reponse pour la même Question (contrainte d'unicité en base).
+        if (StatutSession::JOUEE === $session->getStatut()) {
+            return $this->redirectToRoute('enfant_feedback', ['id' => $id]);
+        }
+
         // Un seul essai par question (cf. Product Specification §2.2) : chaque réponse
         // soumise déclenche directement l'Appel 2 puis, si besoin, l'Appel 3.
         foreach ($texte->getQuestions() as $question) {
+            // Filet de sécurité si une session s'est retrouvée partiellement traitée :
+            // on ne repasse jamais sur une question qui a déjà sa réponse.
+            if (null !== $question->getReponse()) {
+                continue;
+            }
+
             $contenu = (string) $request->request->get('reponse_'.$question->getId(), '');
 
             $reponse = new Reponse($contenu);
