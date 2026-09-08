@@ -1,0 +1,76 @@
+{#
+    Bloc de questions partagé par l'écran de diagnostic (§2.1) et l'écran d'exercice (§2.2).
+
+    Paramètres attendus : `libelleBouton` (texte du bouton), `numeroter` (bool).
+    Cas limite §2.2 : tant qu'une réponse manque, la validation est désactivée avec un
+    message doux — jamais une erreur bloquante.
+#}
+<form method="post" action="{{ path('enfant_exercice_repondre', {id: session.id}) }}"
+      data-formulaire-reponses style="display:flex; flex-direction:column; gap:18px;">
+    {% for question in texte.questions %}
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <label for="reponse_{{ question.id }}" style="font-weight:700;">
+                {%- if numeroter|default(false) %}{{ loop.index }}. {% endif -%}
+                {{ question.enonce }}
+            </label>
+
+            {% if question.type.value == 'qcm' %}
+                {% for choixItem in question.choix %}
+                    <label class="card" style="display:flex; align-items:center; gap:12px; cursor:pointer;">
+                        <input type="radio" name="reponse_{{ question.id }}" value="{{ choixItem }}"
+                               {% if loop.first %}id="reponse_{{ question.id }}"{% endif %} data-champ-reponse>
+                        {{ choixItem }}
+                    </label>
+                {% endfor %}
+            {% else %}
+                <textarea id="reponse_{{ question.id }}" name="reponse_{{ question.id }}" rows="4"
+                          placeholder="Écris ta réponse avec tes mots…" data-champ-reponse
+                          style="padding:14px; border-radius:12px; border:1.5px solid var(--border); font-family:inherit; font-size:15px; line-height:1.5; resize:vertical;"></textarea>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <div data-message-doux hidden
+         style="background: var(--accent-soft); border-radius:10px; padding:12px 16px; font-size:14px;">
+        Il reste une question sans réponse — prends ton temps, il n'y a pas de mauvaise réponse&nbsp;!
+    </div>
+
+    {# Actif par défaut : si le JS ne s'exécute pas, le formulaire reste utilisable
+       (le contrôle de complétude est un confort, pas une garantie métier — le
+       contrôleur accepte de toute façon une réponse vide et la note comme telle). #}
+    <button type="submit" class="btn" data-bouton-valider>{{ libelleBouton }}</button>
+</form>
+
+<script>
+    (function () {
+        const formulaire = document.querySelector('[data-formulaire-reponses]');
+        if (!formulaire) {
+            return;
+        }
+
+        const bouton = formulaire.querySelector('[data-bouton-valider]');
+        const message = formulaire.querySelector('[data-message-doux]');
+        const champs = Array.from(formulaire.querySelectorAll('[data-champ-reponse]'));
+        const noms = Array.from(new Set(champs.map(function (champ) { return champ.name; })));
+        let aCommence = false;
+
+        function estRepondue(nom) {
+            return Array.from(formulaire.querySelectorAll('[name="' + nom + '"]')).some(function (champ) {
+                return champ.type === 'radio' ? champ.checked : champ.value.trim() !== '';
+            });
+        }
+
+        function rafraichir() {
+            const complet = noms.every(estRepondue);
+            bouton.disabled = !complet;
+            // Le message n'apparaît qu'une fois l'enfant entré dans l'exercice : rien
+            // ne doit ressembler à un reproche avant même qu'il ait commencé.
+            message.hidden = complet || !aCommence;
+        }
+
+        formulaire.addEventListener('input', function () { aCommence = true; rafraichir(); });
+        formulaire.addEventListener('change', function () { aCommence = true; rafraichir(); });
+
+        rafraichir();
+    })();
+</script>

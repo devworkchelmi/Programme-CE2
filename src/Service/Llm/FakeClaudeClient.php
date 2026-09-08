@@ -25,7 +25,7 @@ class FakeClaudeClient implements ClaudeClientInterface
             ],
             'question_redigee' => [
                 'enonce' => 'Pourquoi Minou choisit-il le mur le matin ? Explique avec tes mots.',
-                'criteres' => 'La réponse doit mentionner le soleil qui chauffe les pierres, donc la chaleur.',
+                'criteres' => 'La réponse doit dire que le soleil chauffe les pierres du mur (mots-clés attendus : soleil, chauffe, pierres, chaud).',
             ],
         ],
         2 => [
@@ -38,7 +38,7 @@ class FakeClaudeClient implements ClaudeClientInterface
             ],
             'question_redigee' => [
                 'enonce' => 'Pourquoi Noé aime-t-il quand il pleut sur sa cabane ?',
-                'criteres' => 'La réponse doit expliquer que la pluie sur la bâche fait un bruit de tambour qu\'il aime.',
+                'criteres' => 'La réponse doit parler du bruit de tambour de la pluie sur la bâche (mots-clés attendus : bruit, tambour, pluie, bâche).',
             ],
         ],
         3 => [
@@ -51,7 +51,7 @@ class FakeClaudeClient implements ClaudeClientInterface
             ],
             'question_redigee' => [
                 'enonce' => 'Que nous apprend cette histoire sur la façon de gagner une course ?',
-                'criteres' => 'La réponse doit exprimer l\'idée qu\'avancer régulièrement vaut mieux que démarrer vite puis s\'arrêter.',
+                'criteres' => 'La réponse doit dire qu\'avancer sans s\'arrêter vaut mieux que partir vite (mots-clés attendus : avancer, arrêter, lentement, régulier).',
             ],
         ],
         4 => [
@@ -64,7 +64,7 @@ class FakeClaudeClient implements ClaudeClientInterface
             ],
             'question_redigee' => [
                 'enonce' => 'D\'après le texte, comment le carnet a-t-il pu arriver là ? Explique.',
-                'criteres' => 'La réponse doit relier le carnet posé pendant la recette et sa grand-mère qui rangeait les courses au réfrigérateur.',
+                'criteres' => 'La réponse doit relier la recette notée et les courses rangées par la grand-mère (mots-clés attendus : recette, courses, grand-mère, rangeait).',
             ],
         ],
         5 => [
@@ -77,7 +77,7 @@ class FakeClaudeClient implements ClaudeClientInterface
             ],
             'question_redigee' => [
                 'enonce' => 'Qu\'a probablement fait le gardien pendant la nuit ? Justifie avec le texte.',
-                'criteres' => 'La réponse doit déduire qu\'il a mis les bateaux à l\'abri, en s\'appuyant sur "aucun bateau ne manquait" au matin.',
+                'criteres' => 'La réponse doit déduire qu\'il a mis les bateaux à l\'abri pendant la nuit (mots-clés attendus : bateaux, abri, sauver, nuit).',
             ],
         ],
         6 => [
@@ -90,9 +90,22 @@ class FakeClaudeClient implements ClaudeClientInterface
             ],
             'question_redigee' => [
                 'enonce' => 'Que veut dire le chef de gare quand il sourit en parlant de l\'étagère ?',
-                'criteres' => 'La réponse doit interpréter sa remarque comme une confiance dans l\'honnêteté des voyageurs.',
+                'criteres' => 'La réponse doit parler de confiance et d\'honnêteté des voyageurs (mots-clés attendus : confiance, honnêtes, rapportent, gentils).',
             ],
         ],
+    ];
+
+    /**
+     * Vocabulaire de consigne présent dans les critères d'évaluation, sans valeur de
+     * contenu : ignoré au moment de comparer la réponse de l'enfant aux attentes.
+     *
+     * @var list<string>
+     */
+    private const MOTS_DE_CONSIGNE = [
+        'reponse', 'doit', 'mentionner', 'exprimer', 'deduire', 'expliquer', 'relier',
+        'interpreter', 'parler', 'idee', 'texte', 'justifier', 'attendus', 'attendue',
+        'mots', 'cles', 'enfant', 'elle', 'dire', 'comme', 'pendant', 'vaut', 'mieux',
+        'appuyant', 'notee', 'rangees',
     ];
 
     private const FEEDBACKS = [
@@ -178,7 +191,7 @@ class FakeClaudeClient implements ClaudeClientInterface
             ];
         }
 
-        $motsAttendus = $this->motsSignificatifs($attendue);
+        $motsAttendus = $this->motsAttendus($attendue);
         $motsDonnes = $this->motsSignificatifs($donnee);
 
         if ([] === $motsAttendus) {
@@ -209,6 +222,23 @@ class FakeClaudeClient implements ClaudeClientInterface
             'type_erreur_propose' => 'inference',
             'justification_courte' => '[DÉMO] La réponse ne reprend aucun élément attendu.',
         ];
+    }
+
+    /**
+     * Mots réellement attendus dans la réponse : ceux listés entre parenthèses
+     * ("mots-clés attendus : ...") s'il y en a, sinon les mots du critère débarrassés
+     * du vocabulaire de consigne — sans ce filtrage, "la réponse doit mentionner..."
+     * pèse autant que le contenu et une bonne réponse passe sous le seuil.
+     *
+     * @return list<string>
+     */
+    private function motsAttendus(string $criteres): array
+    {
+        if (1 === preg_match('/mots-clés attendus\s*:\s*([^)]+)/u', $criteres, $correspondances)) {
+            return $this->motsSignificatifs($correspondances[1]);
+        }
+
+        return array_values(array_diff($this->motsSignificatifs($criteres), self::MOTS_DE_CONSIGNE));
     }
 
     private function extraire(string $motif, string $sujet): string
