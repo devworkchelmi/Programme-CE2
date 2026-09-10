@@ -170,4 +170,23 @@ class TexteGenere
 
         return $this;
     }
+
+    /**
+     * Remplace entièrement les questions existantes (utilisé lors d'une régénération de
+     * texte en relecture, cf. AdulteController::regenerer() et Product Specification §2.4).
+     * Grâce à orphanRemoval sur la relation, les anciennes questions sont supprimées en
+     * base au flush suivant.
+     *
+     * @param Question[] $questions
+     */
+    public function remplacerQuestions(array $questions): static
+    {
+        $this->questions->clear();
+
+        foreach ($questions as $question) {
+            $this->addQuestion($question);
+        }
+
+        return $this;
+    }
 }

@@ -37,14 +37,14 @@ class AdulteController extends AbstractController
 
     #[Route('/adulte/suivi', name: 'adulte_suivi')]
     public function suivi(
+        Request $request,
         EnfantRepository $enfantRepository,
         SessionRepository $sessionRepository,
         ReponseRepository $reponseRepository,
         AjustementService $ajustementService,
     ): Response {
-        // MVP : un seul enfant (cf. Product Specification §0) — on prend le premier connu.
-        // TODO (jour 11-12) : remplacer par la sélection réelle une fois la fiche Enfant créée.
-        $enfant = $enfantRepository->findOneBy([]);
+        $enfants = $enfantRepository->findBy([], ['id' => 'ASC']);
+        $enfant = $this->enfantSelectionne($request, $enfants);
 
         $sessionsJouees = $enfant instanceof Enfant
             ? $sessionRepository->lesPlusRecentesJouees($enfant, 10)
@@ -71,11 +71,56 @@ class AdulteController extends AbstractController
 
         return $this->render('adulte/suivi.html.twig', [
             'enfant' => $enfant,
+            'enfants' => $enfants,
             'sessions' => $sessionsAffichees,
             'tendance' => array_reverse($tendance),
             'reponsesAConfirmer' => $reponsesAConfirmer,
             'orthographeRecente' => $orthographeRecente,
         ]);
+    }
+
+    /**
+     * Mémorise l'enfant choisi dans le sélecteur du suivi (cf. sélection réelle de
+     * l'enfant, TODO jour 11-12) — utile dès qu'il y a plusieurs fiches Enfant.
+     */
+    #[Route('/adulte/enfant/selectionner', name: 'adulte_enfant_selectionner', methods: ['POST'])]
+    public function selectionnerEnfant(Request $request, EnfantRepository $enfantRepository): Response
+    {
+        $enfant = $enfantRepository->find($request->request->getInt('enfant_id'));
+
+        if (null !== $enfant) {
+            $request->getSession()->set('enfant_id_selectionne', $enfant->getId());
+        }
+
+        return $this->redirectToRoute('adulte_suivi');
+    }
+
+    /**
+     * Renvoie l'enfant actuellement sélectionné, mémorisé en session HTTP (cf. TODO jour
+     * 11-12 — sélection réelle de l'enfant). Sans sélection mémorisée, ou si l'ID mémorisé
+     * ne correspond plus à un enfant existant (ex. supprimé), on retombe sur le premier
+     * enfant connu et on mémorise ce choix pour la suite.
+     *
+     * @param Enfant[] $enfants
+     */
+    private function enfantSelectionne(Request $request, array $enfants): ?Enfant
+    {
+        if ([] === $enfants) {
+            return null;
+        }
+
+        $idMemorise = $request->getSession()->get('enfant_id_selectionne');
+
+        foreach ($enfants as $enfant) {
+            if ($enfant->getId() === $idMemorise) {
+                return $enfant;
+            }
+        }
+
+        $premier = $enfants[0];
+        $request->getSession()->set('enfant_id_selectionne', $premier->getId());
+
+        return $premier;
     }
 
     /**
@@ -89,12 +134,13 @@ class AdulteController extends AbstractController
      */
     #[Route('/adulte/session/demarrer', name: 'adulte_session_demarrer', methods: ['POST'])]
     public function demarrerSession(
+        Request $request,
         EnfantRepository $enfantRepository,
         SessionRepository $sessionRepository,
         TexteGenerationService $texteGenerationService,
         EntityManagerInterface $em,
     ): Response {
-        $enfant = $enfantRepository->findOneBy([]);
+        $enfant = $this->enfantSelectionne($request, $enfantRepository->findBy([], ['id' => 'ASC']));
 
         if (null === $enfant) {
             throw $this->createNotFoundException('Aucune fiche enfant — crée-en une avec la commande app:creer-enfant.');
@@ -223,7 +269,19 @@ class AdulteController extends AbstractController
 
         $resultat = $texteGenerationService->genererTexteEtQuestions($session->getNiveauVise());
         $texte->setContenu($resultat['titre'], $resultat['texte']);
-        // TODO (jour 5-6) : remplacer les Question existantes par $resultat['questions'].
+
+        // Les questions portaient sur l'ancien texte : elles n'ont plus de sens une fois le
+        // texte régénéré, on les remplace entièrement (orphanRemoval s'occupe de supprimer
+        // les anciennes en base, cf. TexteGenere::remplacerQuestions()).
+        $texte->remplacerQuestions(array_map(
+            static fn (array $questionData) => new Question(
+                TypeQuestion::from($questionData['type']),
+                $questionData['enonce'],
+                $questionData['reponse_attendue_ou_criteres'],
+                $questionData['choix'] ?? null,
+            ),
+            $resultat['questions'],
+        ));
 
         $em->flush();
 

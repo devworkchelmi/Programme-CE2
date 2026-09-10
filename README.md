@@ -84,10 +84,7 @@ Ils ne nécessitent pas de base de données.
 
 ## Ce qui reste à faire (cf. architecture technique §4, jours 3-14)
 
-- Remplacer les questions existantes lors d'une régénération de texte (`AdulteController::regenerer`).
 - Charte visuelle : reprendre plus finement le canevas de design (`01-parcours-produit-maquettes.html`).
-- Sélection réelle de l'enfant (actuellement le premier trouvé — cf. TODO jour 11-12
-  dans `AdulteController::suivi()`).
 - Édition inline d'un texte généré côté relecture (pour l'instant : valider ou régénérer
   seulement, pas de modification directe — cf. Product Specification §2.4).
 
@@ -119,3 +116,9 @@ Ils ne nécessitent pas de base de données.
   l'enfant (2 mots maximum, après le feedback) et en intégralité dans le suivi adulte.
   L'orthographe ne pèse jamais sur l'évaluation de la compréhension ni sur le taux de
   réussite. Migration `Version20260909070351`.
+- Régénération d'un texte en relecture (`AdulteController::regenerer`) : remplace aussi
+  les questions liées, plus seulement le contenu du texte (`TexteGenere::remplacerQuestions()`,
+  orphanRemoval supprime les anciennes questions en base).
+- Sélection réelle de l'enfant : sélecteur sur `adulte/suivi.html.twig` (affiché seulement
+  s'il y a plusieurs enfants), mémorisée en session HTTP (`AdulteController::enfantSelectionne()`,
+  route `POST /adulte/enfant/selectionner`). Aucune nouvelle colonne — pas de migration.
