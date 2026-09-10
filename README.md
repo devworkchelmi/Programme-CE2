@@ -114,3 +114,8 @@ Ils ne nécessitent pas de base de données.
   `ClaudeClientFactory`, pour tout tester sans appel API (voir section dédiée plus haut).
 - `ClaudeClient` remonte désormais le message d'erreur exact de l'API Anthropic au lieu
   du seul code HTTP (le schéma JSON n'accepte notamment ni `minItems` ni `maxItems`).
+- Vérification orthographique des réponses rédigées, greffée sur l'Appel 2 (aucun appel
+  LLM supplémentaire) : stockée dans `Reponse.correctionsOrthographe`, affichée à
+  l'enfant (2 mots maximum, après le feedback) et en intégralité dans le suivi adulte.
+  L'orthographe ne pèse jamais sur l'évaluation de la compréhension ni sur le taux de
+  réussite. Migration `Version20260909070351`.

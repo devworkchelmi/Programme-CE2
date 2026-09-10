@@ -7,6 +7,7 @@ use App\Entity\Enfant;
 use App\Entity\Enum\Correction;
 use App\Entity\Enum\StatutSession;
 use App\Entity\Enum\TypeErreur;
+use App\Entity\Enum\TypeQuestion;
 use App\Entity\Enum\TypeSession;
 use App\Entity\Feedback;
 use App\Entity\Reponse;
@@ -116,11 +117,16 @@ class EnfantController extends AbstractController
             $reponse = new Reponse($contenu);
             $question->setReponse($reponse);
 
+            // L'orthographe n'est vérifiée que sur les réponses rédigées : dans un QCM,
+            // l'enfant ne fait que reprendre un choix déjà écrit correctement.
+            $estRedigee = TypeQuestion::REDIGEE === $question->getType();
+
             $analyse = $analyseReponseService->analyser(
                 $texte->getContenu(),
                 $question->getEnonce(),
                 $question->getReponseAttendueOuCriteres(),
                 $contenu,
+                $estRedigee,
             );
 
             $typeErreur = null !== $analyse['type_erreur_propose']
@@ -132,6 +138,8 @@ class EnfantController extends AbstractController
                 $typeErreur,
                 $analyse['justification_courte'],
             );
+
+            $reponse->enregistrerCorrectionsOrthographe($analyse['orthographe']);
 
             if (Correction::OUI !== $reponse->getCorrecte()) {
                 $feedback = $feedbackService->genererFeedback(

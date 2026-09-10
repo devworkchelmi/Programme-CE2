@@ -70,6 +70,32 @@
                 </div>
             {% endif %}
 
+            {% if orthographeRecente is defined and orthographeRecente is not empty %}
+                <div class="card">
+                    <div style="font-family:'Baloo 2'; font-size:16px; margin-bottom:4px;">Orthographe à revoir</div>
+                    <p style="font-size:12.5px; color:var(--ink-soft); margin-top:0; margin-bottom:14px;">
+                        Relevé sur les réponses rédigées uniquement. L'orthographe n'entre pas dans
+                        l'évaluation de la compréhension&nbsp;: une réponse juste mal écrite reste juste.
+                        L'enfant n'en voit que les deux premiers mots, après son feedback.
+                    </p>
+                    {% for reponse in orthographeRecente %}
+                        <div style="padding:10px 0; border-bottom:1px solid var(--border);">
+                            <div style="font-size:12px; color:var(--ink-soft); margin-bottom:6px;">
+                                {{ reponse.question.texteGenere.session.date|date('d/m/Y') }} — « {{ reponse.contenuEnfant }} »
+                            </div>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                {% for correction in reponse.correctionsOrthographe %}
+                                    <span style="background:var(--accent-soft); border-radius:8px; padding:4px 10px; font-size:13px;">
+                                        <span style="text-decoration:line-through; color:var(--ink-soft);">{{ correction.mot_ecrit }}</span>
+                                        &nbsp;→&nbsp;<strong>{{ correction.correction }}</strong>
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
             <div class="card">
                 <div style="font-family:'Baloo 2'; font-size:16px; margin-bottom:12px;">Sessions récentes</div>
                 <table style="width:100%; border-collapse:collapse;">

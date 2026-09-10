@@ -39,6 +39,19 @@ class Reponse
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $commentaireLlm = null;
 
+    /**
+     * Fautes d'orthographe relevées dans une réponse rédigée, sous la forme
+     * [['mot_ecrit' => 'solei', 'correction' => 'soleil'], ...].
+     *
+     * Signal volontairement séparé de $correcte : l'orthographe n'entre jamais dans
+     * l'évaluation de la compréhension (cf. Product Specification §2.3 — le focus reste
+     * la compréhension, pas la note). Toujours vide pour les QCM.
+     *
+     * @var list<array{mot_ecrit: string, correction: string}>|null
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $correctionsOrthographe = null;
+
     #[ORM\OneToOne(targetEntity: Feedback::class, mappedBy: 'reponse', cascade: ['persist', 'remove'])]
     private ?Feedback $feedback = null;
 
@@ -110,6 +123,24 @@ class Reponse
     public function getCommentaireLlm(): ?string
     {
         return $this->commentaireLlm;
+    }
+
+    /**
+     * @return list<array{mot_ecrit: string, correction: string}>
+     */
+    public function getCorrectionsOrthographe(): array
+    {
+        return $this->correctionsOrthographe ?? [];
+    }
+
+    /**
+     * @param list<array{mot_ecrit: string, correction: string}> $corrections
+     */
+    public function enregistrerCorrectionsOrthographe(array $corrections): static
+    {
+        $this->correctionsOrthographe = [] === $corrections ? null : $corrections;
+
+        return $this;
     }
 
     public function getFeedback(): ?Feedback

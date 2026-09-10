@@ -38,4 +38,25 @@ class ReponseRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Réponses rédigées comportant au moins une correction orthographique, les plus
+     * récentes en premier — alimente le récapitulatif d'orthographe du suivi adulte.
+     *
+     * @return list<Reponse>
+     */
+    public function avecCorrectionsOrthographe(Enfant $enfant, int $limite = 10): array
+    {
+        return $this->createQueryBuilder('r')
+            ->join('r.question', 'q')
+            ->join('q.texteGenere', 't')
+            ->join('t.session', 's')
+            ->andWhere('s.enfant = :enfant')
+            ->andWhere('r.correctionsOrthographe IS NOT NULL')
+            ->setParameter('enfant', $enfant)
+            ->orderBy('s.date', 'DESC')
+            ->setMaxResults($limite)
+            ->getQuery()
+            ->getResult();
+    }
 }

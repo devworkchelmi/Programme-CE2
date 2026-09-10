@@ -34,6 +34,18 @@
                 {% elseif estCorrecte %}
                     <p style="margin:0;">Bravo, c'est exactement ça !</p>
                 {% endif %}
+
+                {# Orthographe : 2 mots au maximum et toujours après le feedback de
+                   compréhension — c'est un bonus, pas le sujet principal (§2.3). #}
+                {% if reponse and reponse.correctionsOrthographe is not empty %}
+                    <p style="margin:10px 0 0; padding-top:10px; border-top:1px dashed var(--border); font-size:14px;">
+                        Au fait, on écrit&nbsp;:
+                        {% for correction in reponse.correctionsOrthographe|slice(0, 2) %}
+                            <strong>{{ correction.correction }}</strong>
+                            <span style="color:var(--ink-soft);">(tu as écrit «&nbsp;{{ correction.mot_ecrit }}&nbsp;»)</span>{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </p>
+                {% endif %}
             </div>
         {% endfor %}
 

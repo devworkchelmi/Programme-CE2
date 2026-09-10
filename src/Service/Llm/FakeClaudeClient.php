@@ -108,6 +108,27 @@ class FakeClaudeClient implements ClaudeClientInterface
         'appuyant', 'notee', 'rangees',
     ];
 
+    /**
+     * Fautes lexicales fréquentes en CE2, détectées telles quelles en mode démo.
+     *
+     * @var array<string, string>
+     */
+    private const FAUTES_FREQUENTES = [
+        'jai' => "j'ai",
+        'quil' => "qu'il",
+        'quelle' => "qu'elle",
+        'parceque' => 'parce que',
+        'beacoup' => 'beaucoup',
+        'beaucoups' => 'beaucoup',
+        'toujour' => 'toujours',
+        'fesait' => 'faisait',
+        'etait' => 'était',
+        'aparu' => 'apparu',
+        'apele' => 'appelle',
+        'sest' => "s'est",
+        'cest' => "c'est",
+    ];
+
     private const FEEDBACKS = [
         "Tu n'es pas loin ! Relis la phrase où l'on parle de ce moment de l'histoire : la réponse s'y cache.",
         "Bonne idée, mais il manque un détail. Reprends le texte doucement, la phrase importante est vers le milieu.",
@@ -129,7 +150,15 @@ class FakeClaudeClient implements ClaudeClientInterface
         }
 
         if (in_array('correcte', $proprietes, true)) {
-            return $this->analyserReponse($prompt);
+            $analyse = $this->analyserReponse($prompt);
+
+            // Le schéma porte le signal : l'orthographe n'est demandée que pour les
+            // réponses rédigées (cf. AnalyseReponseService::schema()).
+            if (in_array('orthographe', $proprietes, true)) {
+                $analyse['orthographe'] = $this->corrigerOrthographe($prompt);
+            }
+
+            return $analyse;
         }
 
         if (in_array('texte_feedback', $proprietes, true)) {
@@ -239,6 +268,86 @@ class FakeClaudeClient implements ClaudeClientInterface
         }
 
         return array_values(array_diff($this->motsSignificatifs($criteres), self::MOTS_DE_CONSIGNE));
+    }
+
+    /**
+     * Correcteur orthographique de démonstration : fautes fréquentes connues, puis mots
+     * à une lettre près d'un mot du texte ou d'un mot-clé attendu.
+     *
+     * Volontairement prudent — on ne signale ni un accent oublié ni un pluriel, pour ne
+     * pas noyer l'enfant sous des corrections qui n'en sont pas.
+     *
+     * @return list<array{mot_ecrit: string, correction: string}>
+     */
+    private function corrigerOrthographe(string $prompt): array
+    {
+        $donnee = $this->extraire('/Réponse de l\'enfant\s*:\s*(.*)$/mu', $prompt);
+
+        if ('' === trim($donnee)) {
+            return [];
+        }
+
+        $texte = 1 === preg_match('/Texte\s*:\s*(.*?)\n\s*Question\s*:/su', $prompt, $bouts)
+            ? $bouts[1]
+            : '';
+        $attendue = $this->extraire('/Réponse attendue ou critères\s*:\s*(.*)$/mu', $prompt);
+
+        $vocabulaire = array_merge($this->motsSignificatifs($texte), $this->motsSignificatifs($attendue));
+        $corrections = [];
+
+        foreach (preg_split('/[^\p{L}\p{N}]+/u', $donnee, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $motEcrit) {
+            if (count($corrections) >= 5) {
+                continue;
+            }
+
+            $normalise = $this->normaliser($motEcrit);
+
+            // Les fautes connues sont fiables : pas de garde-fou de longueur ("jai").
+            if (isset(self::FAUTES_FREQUENTES[$normalise])) {
+                $corrections[$motEcrit] = self::FAUTES_FREQUENTES[$normalise];
+                continue;
+            }
+
+            // La détection par proximité, elle, ne s'applique qu'aux mots assez longs :
+            // sur des mots courts, une lettre d'écart désigne trop souvent un autre mot
+            // parfaitement correct.
+            if (mb_strlen($motEcrit) < 4 || in_array($normalise, $vocabulaire, true)) {
+                continue;
+            }
+
+            foreach ($vocabulaire as $motReference) {
+                if (1 !== levenshtein($normalise, $motReference) || $this->memeMotAccordeOuAccentue($normalise, $motReference)) {
+                    continue;
+                }
+
+                $corrections[$motEcrit] = $motReference;
+                break;
+            }
+        }
+
+        $resultat = [];
+        foreach ($corrections as $motEcrit => $correction) {
+            $resultat[] = ['mot_ecrit' => (string) $motEcrit, 'correction' => $correction];
+        }
+
+        return $resultat;
+    }
+
+    /**
+     * Vrai quand deux formes ne diffèrent que par un pluriel : ce n'est pas une faute
+     * d'orthographe lexicale, et le signaler serait plus déroutant qu'utile.
+     */
+    private function memeMotAccordeOuAccentue(string $a, string $b): bool
+    {
+        return rtrim($a, 'sx') === rtrim($b, 'sx');
+    }
+
+    private function normaliser(string $mot): string
+    {
+        return strtr(mb_strtolower($mot, 'UTF-8'), [
+            'à' => 'a', 'â' => 'a', 'ä' => 'a', 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'î' => 'i', 'ï' => 'i', 'ô' => 'o', 'ö' => 'o', 'ù' => 'u', 'û' => 'u', 'ü' => 'u', 'ç' => 'c',
+        ]);
     }
 
     private function extraire(string $motif, string $sujet): string

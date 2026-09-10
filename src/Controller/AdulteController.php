@@ -65,11 +65,16 @@ class AdulteController extends AbstractController
             ? $reponseRepository->aConfirmer($enfant, 10)
             : [];
 
+        $orthographeRecente = $enfant instanceof Enfant
+            ? $reponseRepository->avecCorrectionsOrthographe($enfant, 10)
+            : [];
+
         return $this->render('adulte/suivi.html.twig', [
             'enfant' => $enfant,
             'sessions' => $sessionsAffichees,
             'tendance' => array_reverse($tendance),
             'reponsesAConfirmer' => $reponsesAConfirmer,
+            'orthographeRecente' => $orthographeRecente,
         ]);
     }
 

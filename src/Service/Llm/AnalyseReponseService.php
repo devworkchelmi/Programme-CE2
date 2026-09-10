@@ -16,13 +16,17 @@ class AnalyseReponseService
     }
 
     /**
-     * @return array{correcte: string, type_erreur_propose: ?string, justification_courte: string}
+     * @param bool $verifierOrthographe uniquement pour les réponses rédigées : un QCM
+     *                                  ne fait que reprendre un choix déjà écrit
+     *
+     * @return array{correcte: string, type_erreur_propose: ?string, justification_courte: string, orthographe: list<array{mot_ecrit: string, correction: string}>}
      */
     public function analyser(
         string $texte,
         string $enonceQuestion,
         string $reponseAttendueOuCriteres,
         string $reponseEnfant,
+        bool $verifierOrthographe = false,
     ): array {
         $prompt = <<<PROMPT
             Voici un texte de lecture destiné à un enfant de CE2, une question posée sur ce texte,
@@ -43,25 +47,62 @@ class AnalyseReponseService
             Reste prudent : c'est une hypothèse, pas un verdict — elle sera confirmée ou corrigée par un adulte.
             PROMPT;
 
-        return $this->claudeClient->demanderJson($prompt, $this->schema());
+        if ($verifierOrthographe) {
+            $prompt .= <<<PROMPT
+
+
+                Relève aussi les mots mal orthographiés dans la réponse de l'enfant, dans le champ
+                "orthographe" (liste vide s'il n'y en a pas). Règles :
+                - Ne signale que de vraies fautes de mots ; ignore la casse, les accents manquants
+                  sur les majuscules, la ponctuation absente et les tournures maladroites.
+                - 5 mots au maximum, les plus utiles à corriger pour un enfant de CE2.
+                - L'orthographe ne doit EN AUCUN CAS influencer ton évaluation de la compréhension :
+                  un enfant qui a compris mais écrit mal reste "correcte : oui".
+                PROMPT;
+        }
+
+        $resultat = $this->claudeClient->demanderJson($prompt, $this->schema($verifierOrthographe));
+        $resultat['orthographe'] ??= [];
+
+        return $resultat;
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function schema(): array
+    private function schema(bool $avecOrthographe): array
     {
+        $proprietes = [
+            'correcte' => ['type' => 'string', 'enum' => ['oui', 'non', 'partiel']],
+            'type_erreur_propose' => [
+                'type' => ['string', 'null'],
+                'enum' => ['lecture_attention', 'litterale', 'inference', null],
+            ],
+            'justification_courte' => ['type' => 'string'],
+        ];
+        $requis = ['correcte', 'type_erreur_propose', 'justification_courte'];
+
+        if ($avecOrthographe) {
+            $proprietes['orthographe'] = [
+                'type' => 'array',
+                'description' => 'Mots mal orthographiés, liste vide si la réponse est correctement écrite. 5 au maximum.',
+                'items' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'mot_ecrit' => ['type' => 'string'],
+                        'correction' => ['type' => 'string'],
+                    ],
+                    'required' => ['mot_ecrit', 'correction'],
+                    'additionalProperties' => false,
+                ],
+            ];
+            $requis[] = 'orthographe';
+        }
+
         return [
             'type' => 'object',
-            'properties' => [
-                'correcte' => ['type' => 'string', 'enum' => ['oui', 'non', 'partiel']],
-                'type_erreur_propose' => [
-                    'type' => ['string', 'null'],
-                    'enum' => ['lecture_attention', 'litterale', 'inference', null],
-                ],
-                'justification_courte' => ['type' => 'string'],
-            ],
-            'required' => ['correcte', 'type_erreur_propose', 'justification_courte'],
+            'properties' => $proprietes,
+            'required' => $requis,
             'additionalProperties' => false,
         ];
     }
