@@ -13,84 +13,180 @@ namespace App\Service\Llm;
  */
 class FakeClaudeClient implements ClaudeClientInterface
 {
-    /** @var array<int, array{titre: string, texte: string, question_qcm: array{enonce: string, choix: list<string>, attendue: string}, question_redigee: array{enonce: string, criteres: string}}> */
+    /**
+     * Deux variantes par niveau : régénérer un texte (cf. AdulteController::regenerer())
+     * en tire une au hasard, pour qu'on voie vraiment un texte différent au lieu de
+     * retomber systématiquement sur le même (cf. TEXTES_PAR_NIVEAU avant ce correctif).
+     *
+     * @var array<int, list<array{titre: string, texte: string, question_qcm: array{enonce: string, choix: list<string>, attendue: string}, question_redigee: array{enonce: string, criteres: string}}>>
+     */
     private const TEXTES_PAR_NIVEAU = [
         1 => [
-            'titre' => 'Le chat sur le mur',
-            'texte' => "Minou est un chat gris. Il aime dormir sur le mur du jardin. Le matin, le soleil chauffe les pierres. Minou s'installe et ferme les yeux. Quand un oiseau passe, il lève une oreille, puis il se rendort.",
-            'question_qcm' => [
-                'enonce' => 'Où Minou aime-t-il dormir ?',
-                'choix' => ['Sur le mur du jardin', 'Dans la cuisine', 'Sous la voiture'],
-                'attendue' => 'Sur le mur du jardin',
+            [
+                'titre' => 'Le chat sur le mur',
+                'texte' => "Minou est un chat gris. Il aime dormir sur le mur du jardin. Le matin, le soleil chauffe les pierres. Minou s'installe et ferme les yeux. Quand un oiseau passe, il lève une oreille, puis il se rendort.",
+                'question_qcm' => [
+                    'enonce' => 'Où Minou aime-t-il dormir ?',
+                    'choix' => ['Sur le mur du jardin', 'Dans la cuisine', 'Sous la voiture'],
+                    'attendue' => 'Sur le mur du jardin',
+                ],
+                'question_redigee' => [
+                    'enonce' => 'Pourquoi Minou choisit-il le mur le matin ? Explique avec tes mots.',
+                    'criteres' => 'La réponse doit dire que le soleil chauffe les pierres du mur (mots-clés attendus : soleil, chauffe, pierres, chaud).',
+                ],
             ],
-            'question_redigee' => [
-                'enonce' => 'Pourquoi Minou choisit-il le mur le matin ? Explique avec tes mots.',
-                'criteres' => 'La réponse doit dire que le soleil chauffe les pierres du mur (mots-clés attendus : soleil, chauffe, pierres, chaud).',
+            [
+                'titre' => 'Le ballon rouge',
+                'texte' => "Léo a un ballon rouge. Il joue avec dans le jardin. Le vent pousse le ballon vers la rue. Léo court vite pour le rattraper. Papa arrive et l'aide à le récupérer près de la barrière.",
+                'question_qcm' => [
+                    'enonce' => 'Où le vent pousse-t-il le ballon ?',
+                    'choix' => ['Vers la rue', 'Dans la maison', 'Sous la table'],
+                    'attendue' => 'Vers la rue',
+                ],
+                'question_redigee' => [
+                    'enonce' => 'Qui aide Léo à récupérer son ballon ? Explique ce qui se passe.',
+                    'criteres' => 'La réponse doit dire que le papa arrive et aide à récupérer le ballon près de la barrière (mots-clés attendus : papa, aide, barrière, récupérer).',
+                ],
             ],
         ],
         2 => [
-            'titre' => 'La cabane de Noé',
-            'texte' => "Noé a construit une cabane au fond du jardin avec trois planches et une vieille bâche. Il y range son carnet, une lampe de poche et des billes. Quand il pleut, la bâche fait un bruit de tambour. Noé dit que c'est sa musique préférée.",
-            'question_qcm' => [
-                'enonce' => 'Qu\'est-ce que Noé range dans sa cabane ?',
-                'choix' => ['Son carnet, une lampe et des billes', 'Ses chaussures', 'Un ballon et un vélo'],
-                'attendue' => 'Son carnet, une lampe et des billes',
+            [
+                'titre' => 'La cabane de Noé',
+                'texte' => "Noé a construit une cabane au fond du jardin avec trois planches et une vieille bâche. Il y range son carnet, une lampe de poche et des billes. Quand il pleut, la bâche fait un bruit de tambour. Noé dit que c'est sa musique préférée.",
+                'question_qcm' => [
+                    'enonce' => 'Qu\'est-ce que Noé range dans sa cabane ?',
+                    'choix' => ['Son carnet, une lampe et des billes', 'Ses chaussures', 'Un ballon et un vélo'],
+                    'attendue' => 'Son carnet, une lampe et des billes',
+                ],
+                'question_redigee' => [
+                    'enonce' => 'Pourquoi Noé aime-t-il quand il pleut sur sa cabane ?',
+                    'criteres' => 'La réponse doit parler du bruit de tambour de la pluie sur la bâche (mots-clés attendus : bruit, tambour, pluie, bâche).',
+                ],
             ],
-            'question_redigee' => [
-                'enonce' => 'Pourquoi Noé aime-t-il quand il pleut sur sa cabane ?',
-                'criteres' => 'La réponse doit parler du bruit de tambour de la pluie sur la bâche (mots-clés attendus : bruit, tambour, pluie, bâche).',
+            [
+                'titre' => 'Le goûter de Zoé',
+                'texte' => "Zoé prépare un goûter pour ses amis. Elle coupe des pommes et sort des biscuits au chocolat. Son petit frère renverse le jus d'orange sur la table. Zoé essuie tout en riant et propose de l'eau à la place. Ses amis trouvent que c'est le meilleur goûter de l'année.",
+                'question_qcm' => [
+                    'enonce' => 'Que renverse le petit frère de Zoé ?',
+                    'choix' => ['Le jus d\'orange', 'Les biscuits', 'Les pommes'],
+                    'attendue' => 'Le jus d\'orange',
+                ],
+                'question_redigee' => [
+                    'enonce' => 'Comment réagit Zoé quand son frère renverse le jus ?',
+                    'criteres' => 'La réponse doit dire que Zoé essuie en riant et propose de l\'eau, sans se fâcher (mots-clés attendus : essuie, riant, eau, fâche).',
+                ],
             ],
         ],
         3 => [
-            'titre' => 'La course des escargots',
-            'texte' => "Dans la cour de l'école, Lina et Tom ont organisé une course d'escargots. Chacun a tracé une ligne à la craie. L'escargot de Tom est parti très vite, puis il s'est arrêté devant une feuille de salade. Celui de Lina, plus lent, a continué sans jamais s'arrêter. À la récréation suivante, c'est lui qui avait franchi la ligne.",
-            'question_qcm' => [
-                'enonce' => 'Pourquoi l\'escargot de Tom n\'a-t-il pas gagné ?',
-                'choix' => ['Il s\'est arrêté devant une salade', 'Il est reparti en arrière', 'Il était trop petit'],
-                'attendue' => 'Il s\'est arrêté devant une salade',
+            [
+                'titre' => 'La course des escargots',
+                'texte' => "Dans la cour de l'école, Lina et Tom ont organisé une course d'escargots. Chacun a tracé une ligne à la craie. L'escargot de Tom est parti très vite, puis il s'est arrêté devant une feuille de salade. Celui de Lina, plus lent, a continué sans jamais s'arrêter. À la récréation suivante, c'est lui qui avait franchi la ligne.",
+                'question_qcm' => [
+                    'enonce' => 'Pourquoi l\'escargot de Tom n\'a-t-il pas gagné ?',
+                    'choix' => ['Il s\'est arrêté devant une salade', 'Il est reparti en arrière', 'Il était trop petit'],
+                    'attendue' => 'Il s\'est arrêté devant une salade',
+                ],
+                'question_redigee' => [
+                    'enonce' => 'Que nous apprend cette histoire sur la façon de gagner une course ?',
+                    'criteres' => 'La réponse doit dire qu\'avancer sans s\'arrêter vaut mieux que partir vite (mots-clés attendus : avancer, arrêter, lentement, régulier).',
+                ],
             ],
-            'question_redigee' => [
-                'enonce' => 'Que nous apprend cette histoire sur la façon de gagner une course ?',
-                'criteres' => 'La réponse doit dire qu\'avancer sans s\'arrêter vaut mieux que partir vite (mots-clés attendus : avancer, arrêter, lentement, régulier).',
+            [
+                'titre' => 'Le concours de dessin',
+                'texte' => "À l'école, la maîtresse organise un concours de dessin sur le thème de la forêt. Malo dessine très vite un renard, sans faire attention aux couleurs. Amina prend son temps, choisit chaque crayon avec soin et ajoute des détails dans les feuilles. Quand les dessins sont affichés, c'est celui d'Amina que tous les élèves regardent le plus longtemps.",
+                'question_qcm' => [
+                    'enonce' => 'Quel est le thème du concours de dessin ?',
+                    'choix' => ['La forêt', 'La mer', 'L\'espace'],
+                    'attendue' => 'La forêt',
+                ],
+                'question_redigee' => [
+                    'enonce' => 'Pourquoi le dessin d\'Amina attire-t-il plus l\'attention que celui de Malo ?',
+                    'criteres' => 'La réponse doit dire qu\'Amina a pris son temps et soigné les détails, contrairement à Malo qui est allé trop vite (mots-clés attendus : temps, soin, détails, vite).',
+                ],
             ],
         ],
         4 => [
-            'titre' => 'Le carnet retrouvé',
-            'texte' => "Camille cherchait son carnet bleu depuis trois jours. Elle avait vidé son cartable, soulevé son lit, fouillé le placard de l'entrée. Ce matin, en ouvrant le réfrigérateur pour prendre le lait, elle l'a trouvé posé à côté du beurre. Elle a d'abord ri, puis elle s'est souvenue : samedi, elle notait la recette du gâteau pendant que sa grand-mère rangeait les courses.",
-            'question_qcm' => [
-                'enonce' => 'Où Camille a-t-elle retrouvé son carnet ?',
-                'choix' => ['Dans le réfrigérateur', 'Sous son lit', 'Dans son cartable'],
-                'attendue' => 'Dans le réfrigérateur',
+            [
+                'titre' => 'Le carnet retrouvé',
+                'texte' => "Camille cherchait son carnet bleu depuis trois jours. Elle avait vidé son cartable, soulevé son lit, fouillé le placard de l'entrée. Ce matin, en ouvrant le réfrigérateur pour prendre le lait, elle l'a trouvé posé à côté du beurre. Elle a d'abord ri, puis elle s'est souvenue : samedi, elle notait la recette du gâteau pendant que sa grand-mère rangeait les courses.",
+                'question_qcm' => [
+                    'enonce' => 'Où Camille a-t-elle retrouvé son carnet ?',
+                    'choix' => ['Dans le réfrigérateur', 'Sous son lit', 'Dans son cartable'],
+                    'attendue' => 'Dans le réfrigérateur',
+                ],
+                'question_redigee' => [
+                    'enonce' => 'D\'après le texte, comment le carnet a-t-il pu arriver là ? Explique.',
+                    'criteres' => 'La réponse doit relier la recette notée et les courses rangées par la grand-mère (mots-clés attendus : recette, courses, grand-mère, rangeait).',
+                ],
             ],
-            'question_redigee' => [
-                'enonce' => 'D\'après le texte, comment le carnet a-t-il pu arriver là ? Explique.',
-                'criteres' => 'La réponse doit relier la recette notée et les courses rangées par la grand-mère (mots-clés attendus : recette, courses, grand-mère, rangeait).',
+            [
+                'titre' => 'Le message oublié',
+                'texte' => "Hugo devait donner un message important à sa maîtresse, mais il l'a oublié dans la poche de son manteau. Le soir, en cherchant ses clés dans le vestiaire, sa mère retrouve le petit papier plié. Elle comprend alors pourquoi Hugo semblait inquiet depuis le matin. Le lendemain, Hugo arrive à l'école avec le message et un grand sourire de soulagement.",
+                'question_qcm' => [
+                    'enonce' => 'Où Hugo avait-il oublié le message ?',
+                    'choix' => ['Dans la poche de son manteau', 'Dans son cartable', 'Sur la table de la cuisine'],
+                    'attendue' => 'Dans la poche de son manteau',
+                ],
+                'question_redigee' => [
+                    'enonce' => 'Pourquoi Hugo semblait-il inquiet depuis le matin ? Explique avec le texte.',
+                    'criteres' => 'La réponse doit relier l\'inquiétude d\'Hugo au fait qu\'il avait oublié de transmettre le message important (mots-clés attendus : inquiet, oublié, message, important).',
+                ],
             ],
         ],
         5 => [
-            'titre' => 'Le phare et la tempête',
-            'texte' => "Le gardien du phare notait chaque soir la force du vent dans un grand registre. Ce mardi-là, il écrivit seulement trois mots avant de refermer le cahier et de descendre en courant : la mer montait bien plus vite que la veille, et le canot du village était encore amarré au ponton. Les habitants racontent qu'il n'a pas dormi de la nuit, mais qu'au matin, aucun bateau ne manquait.",
-            'question_qcm' => [
-                'enonce' => 'Pourquoi le gardien descend-il en courant ?',
-                'choix' => ['La mer monte vite et le canot est encore au ponton', 'Il a oublié son registre', 'Il veut prévenir sa famille'],
-                'attendue' => 'La mer monte vite et le canot est encore au ponton',
+            [
+                'titre' => 'Le phare et la tempête',
+                'texte' => "Le gardien du phare notait chaque soir la force du vent dans un grand registre. Ce mardi-là, il écrivit seulement trois mots avant de refermer le cahier et de descendre en courant : la mer montait bien plus vite que la veille, et le canot du village était encore amarré au ponton. Les habitants racontent qu'il n'a pas dormi de la nuit, mais qu'au matin, aucun bateau ne manquait.",
+                'question_qcm' => [
+                    'enonce' => 'Pourquoi le gardien descend-il en courant ?',
+                    'choix' => ['La mer monte vite et le canot est encore au ponton', 'Il a oublié son registre', 'Il veut prévenir sa famille'],
+                    'attendue' => 'La mer monte vite et le canot est encore au ponton',
+                ],
+                'question_redigee' => [
+                    'enonce' => 'Qu\'a probablement fait le gardien pendant la nuit ? Justifie avec le texte.',
+                    'criteres' => 'La réponse doit déduire qu\'il a mis les bateaux à l\'abri pendant la nuit (mots-clés attendus : bateaux, abri, sauver, nuit).',
+                ],
             ],
-            'question_redigee' => [
-                'enonce' => 'Qu\'a probablement fait le gardien pendant la nuit ? Justifie avec le texte.',
-                'criteres' => 'La réponse doit déduire qu\'il a mis les bateaux à l\'abri pendant la nuit (mots-clés attendus : bateaux, abri, sauver, nuit).',
+            [
+                'titre' => 'La lettre du grenier',
+                'texte' => "En rangeant le grenier, Élise découvre une boîte en bois fermée par un vieux cadenas rouillé. À l'intérieur se trouve une lettre datée de plus de cinquante ans, écrite par son arrière-grand-père à sa future femme. Élise la lit lentement, touchée par des mots qu'elle ne connaissait pas encore de cet homme qu'elle n'a jamais rencontré. Elle décide de la ranger précieusement, pour la relire un jour à ses propres enfants.",
+                'question_qcm' => [
+                    'enonce' => 'Qui a écrit la lettre trouvée dans le grenier ?',
+                    'choix' => ['L\'arrière-grand-père d\'Élise', 'Le père d\'Élise', 'Une voisine'],
+                    'attendue' => 'L\'arrière-grand-père d\'Élise',
+                ],
+                'question_redigee' => [
+                    'enonce' => 'Pourquoi Élise est-elle touchée en lisant cette lettre ?',
+                    'criteres' => 'La réponse doit dire qu\'elle découvre des mots ou une facette de son arrière-grand-père qu\'elle n\'a jamais connu (mots-clés attendus : découvre, connu, jamais, rencontré).',
+                ],
             ],
         ],
         6 => [
-            'titre' => 'La bibliothèque de la gare',
-            'texte' => "Sur le quai numéro deux, une étagère de bois accueille des livres que les voyageurs déposent et empruntent librement. Personne ne surveille, personne ne note les emprunts. Depuis huit ans, le chef de gare affirme que l'étagère n'a jamais été aussi remplie qu'aujourd'hui — signe, dit-il en souriant, que les gens rapportent davantage qu'ils ne prennent.",
-            'question_qcm' => [
-                'enonce' => 'Comment fonctionne l\'étagère de la gare ?',
-                'choix' => ['Chacun dépose et emprunte librement', 'Il faut une carte d\'abonné', 'Le chef de gare note les emprunts'],
-                'attendue' => 'Chacun dépose et emprunte librement',
+            [
+                'titre' => 'La bibliothèque de la gare',
+                'texte' => "Sur le quai numéro deux, une étagère de bois accueille des livres que les voyageurs déposent et empruntent librement. Personne ne surveille, personne ne note les emprunts. Depuis huit ans, le chef de gare affirme que l'étagère n'a jamais été aussi remplie qu'aujourd'hui — signe, dit-il en souriant, que les gens rapportent davantage qu'ils ne prennent.",
+                'question_qcm' => [
+                    'enonce' => 'Comment fonctionne l\'étagère de la gare ?',
+                    'choix' => ['Chacun dépose et emprunte librement', 'Il faut une carte d\'abonné', 'Le chef de gare note les emprunts'],
+                    'attendue' => 'Chacun dépose et emprunte librement',
+                ],
+                'question_redigee' => [
+                    'enonce' => 'Que veut dire le chef de gare quand il sourit en parlant de l\'étagère ?',
+                    'criteres' => 'La réponse doit parler de confiance et d\'honnêteté des voyageurs (mots-clés attendus : confiance, honnêtes, rapportent, gentils).',
+                ],
             ],
-            'question_redigee' => [
-                'enonce' => 'Que veut dire le chef de gare quand il sourit en parlant de l\'étagère ?',
-                'criteres' => 'La réponse doit parler de confiance et d\'honnêteté des voyageurs (mots-clés attendus : confiance, honnêtes, rapportent, gentils).',
+            [
+                'titre' => 'Le potager partagé',
+                'texte' => "Dans la cour de l'immeuble, les voisins ont transformé un vieux carré de terre en potager commun. Chacun vient y planter ce qu'il veut, arroser quand il passe, récolter quand c'est mûr, sans qu'aucune règle ne soit écrite nulle part. Certains craignaient au début que tout disparaisse en quelques jours. Deux ans plus tard, le potager déborde de tomates et de courgettes, et personne ne se souvient d'un seul désaccord.",
+                'question_qcm' => [
+                    'enonce' => 'Qu\'est-ce qui inquiétait certains voisins au début ?',
+                    'choix' => ['Que tout disparaisse rapidement', 'Que le potager coûte trop cher', 'Qu\'il n\'y ait pas assez de place'],
+                    'attendue' => 'Que tout disparaisse rapidement',
+                ],
+                'question_redigee' => [
+                    'enonce' => 'Que nous apprend cette histoire sur la confiance entre voisins ?',
+                    'criteres' => 'La réponse doit parler de confiance ou d\'entraide qui fonctionne sans règles écrites (mots-clés attendus : confiance, entraide, règles, fonctionne).',
+                ],
             ],
         ],
     ];
@@ -178,7 +274,8 @@ class FakeClaudeClient implements ClaudeClientInterface
             $niveau = max(1, min(6, (int) $correspondances[1]));
         }
 
-        $modele = self::TEXTES_PAR_NIVEAU[$niveau];
+        $variantes = self::TEXTES_PAR_NIVEAU[$niveau];
+        $modele = $variantes[array_rand($variantes)];
 
         return [
             'titre' => sprintf('[DÉMO] %s', $modele['titre']),

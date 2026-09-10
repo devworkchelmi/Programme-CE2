@@ -122,3 +122,7 @@ Ils ne nécessitent pas de base de données.
 - Sélection réelle de l'enfant : sélecteur sur `adulte/suivi.html.twig` (affiché seulement
   s'il y a plusieurs enfants), mémorisée en session HTTP (`AdulteController::enfantSelectionne()`,
   route `POST /adulte/enfant/selectionner`). Aucune nouvelle colonne — pas de migration.
+- Mode démo : deux variantes de texte par niveau dans `FakeClaudeClient` (au lieu d'une
+  seule) — sans ça, « Régénérer » en mode démo renvoyait systématiquement le même texte
+  pour un même niveau visé, ce qui pouvait donner l'impression que le bouton ne
+  fonctionnait pas.
