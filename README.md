@@ -124,3 +124,10 @@ Ils ne nécessitent pas de base de données.
   seule) — sans ça, « Régénérer » en mode démo renvoyait systématiquement le même texte
   pour un même niveau visé, ce qui pouvait donner l'impression que le bouton ne
   fonctionnait pas.
+- Édition inline d'un texte généré côté relecture (§2.4 — actions Valider / Modifier /
+  Régénérer) : bouton « Modifier » sur `adulte/relecture.html.twig` (`?edition=1`, pas
+  d'écran séparé), formulaire pré-rempli (titre, texte, énoncé/choix/critères de chaque
+  question), route `POST /adulte/relecture/{id}/modifier`. Utilise
+  `TexteGenere::marquerModifie()` (déjà présent, jamais câblé) — passe le texte en
+  statutRelecture=`modifie`, mais il faut toujours cliquer sur « Valider » pour le rendre
+  disponible à l'enfant (la modification seule ne valide pas).

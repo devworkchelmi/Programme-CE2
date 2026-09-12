@@ -50,10 +50,12 @@ class AdulteController extends AbstractController
             ? $sessionRepository->lesPlusRecentesJouees($enfant, 10)
             : [];
 
-        $tendance = array_map(
+        // Du plus ancien au plus récent (chronologique) : c'est l'ordre attendu pour
+        // tracer un sparkline de gauche à droite (cf. maquette Suivi adulte).
+        $tendance = array_reverse(array_map(
             static fn ($session) => $ajustementService->tauxReussite($session),
             $sessionsJouees,
-        );
+        ));
 
         // Affichage de la liste (tous statuts, y compris en attente de relecture) : distinct
         // de $sessionsJouees ci-dessus, qui sert uniquement au calcul de tendance.
@@ -73,7 +75,9 @@ class AdulteController extends AbstractController
             'enfant' => $enfant,
             'enfants' => $enfants,
             'sessions' => $sessionsAffichees,
-            'tendance' => array_reverse($tendance),
+            'tendance' => $tendance,
+            'tendancePoints' => $this->pointsSparkline($tendance),
+            'tendanceLabel' => $this->libelleTendance($tendance),
             'reponsesAConfirmer' => $reponsesAConfirmer,
             'orthographeRecente' => $orthographeRecente,
         ]);
@@ -121,6 +125,64 @@ class AdulteController extends AbstractController
         $request->getSession()->set('enfant_id_selectionne', $premier->getId());
 
         return $premier;
+    }
+
+    /**
+     * Coordonnées d'un sparkline SVG (mini-graphique de tendance, cf. maquette Suivi
+     * adulte) à partir des taux de réussite (0 à 1) des sessions récentes, du plus ancien
+     * au plus récent. Null si moins de 2 points — pas de ligne possible.
+     *
+     * @param float[] $tauxReussite
+     */
+    private function pointsSparkline(array $tauxReussite, int $largeur = 140, int $hauteur = 50, int $marge = 6): ?string
+    {
+        $n = count($tauxReussite);
+
+        if ($n < 2) {
+            return null;
+        }
+
+        $points = [];
+        foreach (array_values($tauxReussite) as $index => $taux) {
+            $x = $marge + ($index / ($n - 1)) * ($largeur - 2 * $marge);
+            $y = $marge + (1 - max(0.0, min(1.0, $taux))) * ($hauteur - 2 * $marge);
+            $points[] = sprintf('%.1f,%.1f', $x, $y);
+        }
+
+        return implode(' ', $points);
+    }
+
+    /**
+     * Libellé de tendance (cf. maquette Suivi adulte) : compare la moyenne de la première
+     * moitié des sessions récentes à celle de la seconde moitié — moins sensible à un
+     * accident isolé sur une seule session qu'une simple comparaison premier/dernier point.
+     * Null si moins de 2 points.
+     *
+     * @param float[] $tauxReussite du plus ancien au plus récent
+     */
+    private function libelleTendance(array $tauxReussite): ?string
+    {
+        $n = count($tauxReussite);
+
+        if ($n < 2) {
+            return null;
+        }
+
+        $milieu = intdiv($n, 2);
+        $debut = array_slice($tauxReussite, 0, max(1, $milieu));
+        $fin = array_slice($tauxReussite, -max(1, $n - $milieu));
+
+        $ecart = (array_sum($fin) / count($fin)) - (array_sum($debut) / count($debut));
+
+        if ($ecart > 0.1) {
+            return 'En progression';
+        }
+
+        if ($ecart < -0.1) {
+            return 'En baisse';
+        }
+
+        return 'Stable';
     }
 
     /**
