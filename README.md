@@ -85,8 +85,6 @@ Ils ne nécessitent pas de base de données.
 ## Ce qui reste à faire (cf. architecture technique §4, jours 3-14)
 
 - Charte visuelle : reprendre plus finement le canevas de design (`01-parcours-produit-maquettes.html`).
-- Édition inline d'un texte généré côté relecture (pour l'instant : valider ou régénérer
-  seulement, pas de modification directe — cf. Product Specification §2.4).
 
 ## Fait depuis le scaffold initial
 

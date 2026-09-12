@@ -2,42 +2,104 @@
 
 {% block title %}Relecture — Carnet CE2{% endblock %}
 
+{% block stylesheets %}
+    <style>
+        .champ-edition { display:block; width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--border); font-family:'Atkinson Hyperlegible', sans-serif; font-size:14.5px; color:var(--ink); background:var(--surface); }
+        .champ-label { display:block; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin-bottom:6px; }
+    </style>
+{% endblock %}
+
 {% block body %}
     <div style="display:flex; flex-direction:column; gap:20px;">
-        <div>
-            <div style="font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft);">
-                Espace adulte
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+            <div>
+                <div style="font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft);">
+                    Espace adulte
+                </div>
+                <h1 style="font-size:22px; margin:6px 0 0;">Texte à relire</h1>
             </div>
-            <h1 style="font-size:22px; margin:6px 0 0;">Texte à relire</h1>
+            {% if not edition and texte.statutRelecture.value == 'modifie' %}
+                <div style="align-self:center; font-size:12px; color:var(--ink-soft); background:var(--accent-soft); border-radius:8px; padding:6px 12px;">
+                    Modifié — pense à valider
+                </div>
+            {% endif %}
         </div>
 
-        <div class="card">
-            <div style="font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--adult); margin-bottom:10px;">
-                {{ texte.titre }} — niveau visé {{ session.niveauVise }}/6
-            </div>
-            <p style="font-size:15.5px; line-height:1.7;">{{ texte.contenu }}</p>
-        </div>
+        {% if edition %}
+            <form method="post" action="{{ path('adulte_relecture_modifier', {id: session.id}) }}" style="display:flex; flex-direction:column; gap:16px;">
+                <div class="card" style="display:flex; flex-direction:column; gap:14px;">
+                    <div>
+                        <label class="champ-label" for="titre">Titre — niveau visé {{ session.niveauVise }}/6</label>
+                        <input class="champ-edition" type="text" name="titre" id="titre" value="{{ texte.titre }}" required>
+                    </div>
+                    <div>
+                        <label class="champ-label" for="contenu">Texte</label>
+                        <textarea class="champ-edition" name="contenu" id="contenu" rows="8" style="resize:vertical; line-height:1.6;" required>{{ texte.contenu }}</textarea>
+                    </div>
+                </div>
 
-        <div class="card">
-            <div style="font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:10px;">
-                Questions proposées
-            </div>
-            {% for question in texte.questions %}
-                <p>{{ loop.index }}. {{ question.enonce }} <span style="color:var(--ink-soft);">({{ question.type.value }})</span></p>
-            {% endfor %}
-        </div>
+                <div class="card" style="display:flex; flex-direction:column; gap:18px;">
+                    <div style="font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft);">
+                        Questions proposées
+                    </div>
+                    {% for question in texte.questions %}
+                        <div style="display:flex; flex-direction:column; gap:10px; {% if not loop.last %}padding-bottom:18px; border-bottom:1px solid var(--border);{% endif %}">
+                            <div style="font-size:12px; color:var(--ink-soft); font-weight:700;">
+                                Question {{ loop.index }} — {{ question.type.value == 'qcm' ? 'QCM' : 'rédigée' }}
+                            </div>
+                            <div>
+                                <label class="champ-label" for="question_{{ question.id }}_enonce">Énoncé</label>
+                                <input class="champ-edition" type="text" name="question_{{ question.id }}_enonce" id="question_{{ question.id }}_enonce" value="{{ question.enonce }}" required>
+                            </div>
+                            {% if question.type.value == 'qcm' %}
+                                <div>
+                                    <label class="champ-label" for="question_{{ question.id }}_choix">Choix proposés (un par ligne)</label>
+                                    <textarea class="champ-edition" name="question_{{ question.id }}_choix" id="question_{{ question.id }}_choix" rows="3" style="resize:vertical;">{{ question.choix|join("\n") }}</textarea>
+                                </div>
+                            {% endif %}
+                            <div>
+                                <label class="champ-label" for="question_{{ question.id }}_criteres">{{ question.type.value == 'qcm' ? 'Réponse attendue (doit correspondre exactement à un des choix)' : 'Critères d\'évaluation (jamais montrés à l\'enfant)' }}</label>
+                                <textarea class="champ-edition" name="question_{{ question.id }}_criteres" id="question_{{ question.id }}_criteres" rows="2" style="resize:vertical;">{{ question.reponseAttendueOuCriteres }}</textarea>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
 
-        <div style="display:flex; align-items:flex-start; gap:10px; background: var(--adult-soft, oklch(94% 0.02 250)); border-radius:12px; padding:14px; font-size:12.5px; color:var(--ink-soft);">
-            Prénom anonymisé avant tout envoi au LLM — aucune donnée identifiante transmise (cf. AnonymisationService).
-        </div>
-
-        <div style="display:flex; gap:12px;">
-            <form method="post" action="{{ path('adulte_relecture_valider', {id: session.id}) }}">
-                <button type="submit" class="btn">Valider ce texte</button>
+                <div style="display:flex; gap:12px;">
+                    <button type="submit" class="btn">Enregistrer les modifications</button>
+                    <a href="{{ path('adulte_relecture', {id: session.id}) }}" class="btn btn-outline" style="text-decoration:none; display:inline-flex; align-items:center;">Annuler</a>
+                </div>
             </form>
-            <form method="post" action="{{ path('adulte_relecture_regenerer', {id: session.id}) }}">
-                <button type="submit" class="btn btn-outline">Régénérer</button>
-            </form>
-        </div>
+        {% else %}
+            <div class="card">
+                <div style="font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--adult); margin-bottom:10px;">
+                    {{ texte.titre }} — niveau visé {{ session.niveauVise }}/6
+                </div>
+                <p style="font-size:15.5px; line-height:1.7;">{{ texte.contenu }}</p>
+            </div>
+
+            <div class="card">
+                <div style="font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:10px;">
+                    Questions proposées
+                </div>
+                {% for question in texte.questions %}
+                    <p>{{ loop.index }}. {{ question.enonce }} <span style="color:var(--ink-soft);">({{ question.type.value }})</span></p>
+                {% endfor %}
+            </div>
+
+            <div style="display:flex; align-items:flex-start; gap:10px; background: var(--adult-soft, oklch(94% 0.02 250)); border-radius:12px; padding:14px; font-size:12.5px; color:var(--ink-soft);">
+                Prénom anonymisé avant tout envoi au LLM — aucune donnée identifiante transmise (cf. AnonymisationService).
+            </div>
+
+            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                <form method="post" action="{{ path('adulte_relecture_valider', {id: session.id}) }}">
+                    <button type="submit" class="btn">Valider ce texte</button>
+                </form>
+                <a href="{{ path('adulte_relecture', {id: session.id, edition: 1}) }}" class="btn btn-outline" style="text-decoration:none; display:inline-flex; align-items:center;">Modifier</a>
+                <form method="post" action="{{ path('adulte_relecture_regenerer', {id: session.id}) }}">
+                    <button type="submit" class="btn btn-outline">Régénérer</button>
+                </form>
+            </div>
+        {% endif %}
     </div>
 {% endblock %}

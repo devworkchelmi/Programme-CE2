@@ -69,15 +69,43 @@ class Question
         return $this->enonce;
     }
 
+    /**
+     * Édition inline en relecture adulte (cf. Product Specification §2.4) : seul point
+     * d'entrée pour corriger l'énoncé d'une question déjà générée.
+     */
+    public function setEnonce(string $enonce): static
+    {
+        $this->enonce = $enonce;
+
+        return $this;
+    }
+
     /** @return array<int, string>|null */
     public function getChoix(): ?array
     {
         return $this->choix;
     }
 
+    /**
+     * @param array<int, string>|null $choix
+     */
+    public function setChoix(?array $choix): static
+    {
+        $this->choix = $choix;
+
+        return $this;
+    }
+
     public function getReponseAttendueOuCriteres(): string
     {
         return $this->reponseAttendueOuCriteres;
+    }
+
+    public function setReponseAttendueOuCriteres(string $reponseAttendueOuCriteres): static
+    {
+        $this->reponseAttendueOuCriteres = $reponseAttendueOuCriteres;
+
+        return $this;
     }
 
     public function getReponse(): ?Reponse

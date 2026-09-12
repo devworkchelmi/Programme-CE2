@@ -219,7 +219,7 @@ class AdulteController extends AbstractController
     }
 
     #[Route('/adulte/relecture/{id}', name: 'adulte_relecture')]
-    public function relecture(int $id, SessionRepository $sessionRepository): Response
+    public function relecture(int $id, Request $request, SessionRepository $sessionRepository): Response
     {
         $session = $sessionRepository->find($id);
 
@@ -230,7 +230,72 @@ class AdulteController extends AbstractController
         return $this->render('adulte/relecture.html.twig', [
             'session' => $session,
             'texte' => $session->getTexteGenere(),
+            // ?edition=1 bascule l'écran en édition inline (cf. Product Specification §2.4)
+            // plutôt qu'un écran séparé — pas de mutation ici, donc un simple lien suffit.
+            'edition' => $request->query->getBoolean('edition'),
         ]);
+    }
+
+    /**
+     * Édition inline d'un texte généré, avant validation (cf. Product Specification §2.4 —
+     * actions Valider / Modifier / Régénérer). Distincte de valider() : une fois enregistrée,
+     * la modification passe le texte en statutRelecture=MODIFIE, mais il faut toujours
+     * cliquer sur « Valider » pour le rendre disponible à l'enfant (règle non négociable).
+     */
+    #[Route('/adulte/relecture/{id}/modifier', name: 'adulte_relecture_modifier', methods: ['POST'])]
+    public function modifier(int $id, Request $request, SessionRepository $sessionRepository, EntityManagerInterface $em): Response
+    {
+        $session = $sessionRepository->find($id);
+        $texte = $session?->getTexteGenere();
+
+        if (null === $session || null === $texte) {
+            throw $this->createNotFoundException();
+        }
+
+        $titre = trim((string) $request->request->get('titre'));
+        $contenu = trim((string) $request->request->get('contenu'));
+
+        if ('' === $titre || '' === $contenu) {
+            $this->addFlash('info', 'Le titre et le texte ne peuvent pas être vides — modifications non enregistrées.');
+
+            return $this->redirectToRoute('adulte_relecture', ['id' => $id, 'edition' => 1]);
+        }
+
+        $texte->setContenu($titre, $contenu);
+
+        foreach ($texte->getQuestions() as $question) {
+            $prefixe = 'question_'.$question->getId().'_';
+
+            $enonce = trim((string) $request->request->get($prefixe.'enonce'));
+            $criteres = trim((string) $request->request->get($prefixe.'criteres'));
+
+            if ('' !== $enonce) {
+                $question->setEnonce($enonce);
+            }
+            if ('' !== $criteres) {
+                $question->setReponseAttendueOuCriteres($criteres);
+            }
+
+            if (TypeQuestion::QCM === $question->getType()) {
+                $choixBrut = (string) $request->request->get($prefixe.'choix', '');
+                $choix = array_values(array_filter(
+                    array_map('trim', explode("\n", $choixBrut)),
+                    static fn (string $c) => '' !== $c,
+                ));
+
+                if ([] !== $choix) {
+                    $question->setChoix($choix);
+                }
+            }
+        }
+
+        // TODO (jour 5-6) : remplacer 'adulte' par l'identifiant réel une fois l'entité User pleinement câblée à la session.
+        $texte->marquerModifie('adulte');
+        $em->flush();
+
+        $this->addFlash('success', 'Modifications enregistrées — pense à valider le texte pour le rendre disponible à l\'enfant.');
+
+        return $this->redirectToRoute('adulte_relecture', ['id' => $id]);
     }
 
     #[Route('/adulte/relecture/{id}/valider', name: 'adulte_relecture_valider', methods: ['POST'])]
