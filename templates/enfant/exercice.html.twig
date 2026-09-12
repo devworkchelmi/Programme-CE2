@@ -4,15 +4,33 @@
 
 {% block body %}
     <div style="display:flex; flex-direction:column; gap:20px;">
-        <div style="font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft);">
-            Exercice du jour — Niveau {{ session.niveauVise }}
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+            <div>
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+                <div style="font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft);">
+                    Exercice du jour
+                </div>
+                <h1 style="font-size:24px; margin:6px 0 0;">C'est parti pour la lecture&nbsp;!</h1>
+                <p style="color:var(--ink-soft); margin:4px 0 0;">
+                    Lis bien le texte ci-dessous, puis réponds aux questions à ton rythme.
+                </p>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:6px; background:var(--accent-soft); color:var(--accent); font-family:'Baloo 2'; font-weight:700; font-size:13px; padding:9px 15px; border-radius:99px; flex:none;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none"><polygon points="12,2.5 14.9,9.1 22,9.9 16.7,14.6 18.3,21.5 12,17.8 5.7,21.5 7.3,14.6 2,9.9 9.1,9.1"></polygon></svg>
+                Niveau {{ session.niveauVise }}
+            </div>
         </div>
 
-        <div class="card">
-            <div style="font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--accent); margin-bottom:10px;">
+        <div class="card" style="position:relative; overflow:hidden;">
+            <div aria-hidden="true" style="position:absolute; top:-18px; right:10px; font-family:'Baloo 2'; font-size:76px; line-height:1; color:var(--accent-soft); user-select:none;">”</div>
+            <div style="font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--accent); margin-bottom:10px; position:relative;">
                 {{ texte.titre }}
             </div>
-            <p style="font-size:16.5px; line-height:1.7;">{{ texte.contenu }}</p>
+            <p style="font-size:16.5px; line-height:1.7; position:relative;">{{ texte.contenu }}</p>
         </div>
 
         {% include 'enfant/_questions.html.twig' with {libelleBouton: 'Valider mes réponses', numeroter: true} %}

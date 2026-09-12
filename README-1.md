@@ -160,31 +160,3 @@ Ils ne nécessitent pas de base de données.
   Diagnostic/Feedback pour que l'écran le plus utilisé au quotidien soit aussi agréable
   à l'œil qu'eux — aucun changement fonctionnel, uniquement décoratif (CSS + SVG inline,
   pas de JS).
-- Charte graphique — dégradé « ciel/nuit » côté enfant (`base.html.twig`) : l'accent orange
-  d'origine est remplacé par un bleu (boutons, badge du logo, icônes, sélections QCM,
-  pastille de niveau). Nouvelle variable CSS `--accent-gradient` (dégradé, pour les
-  surfaces pleines : boutons, badge logo) à côté de `--accent`/`--accent-soft` (couleurs
-  pleines, pour le texte/bordures/icônes — un dégradé ne s'y applique pas).
-- Charte graphique — même dégradé bleu côté adulte (`base.html.twig`, bloc `body.theme-adulte`) :
-  l'orange restauré temporairement est remplacé à son tour par un dégradé bleu, dans la
-  même famille que côté enfant mais nettement plus sombre et désaturé (proche de
-  `--adult`, déjà utilisé pour la sparkline de tendance sur le suivi) — les deux univers
-  restent distincts par l'intensité plutôt que par la teinte.
-- Charte graphique — fond enfant en rose pâle (`base.html.twig`, `:root`) : `--bg`/`--surface`/
-  `--ink`/`--ink-soft`/`--border` passent du beige-pêche d'origine à un rose doux (même
-  structure claire/douce, juste la teinte qui change). N'affecte que les écrans enfant
-  (et la connexion, qui utilise le thème par défaut) — `body.theme-adulte` définit son
-  propre fond bleu-gris et n'est pas concerné.
-- Charte graphique — texte enfant en encre prune/mauve (`base.html.twig`, `:root`) :
-  `--ink`/`--ink-soft` passent du gris-brun neutre d'origine à un mauve sombre, à
-  mi-chemin sur le cercle chromatique entre le rose du fond et le bleu de l'accent —
-  cohérent avec les deux plutôt qu'une troisième teinte non reliée. Contraste vérifié
-  (ratio ~12:1 pour le texte principal, ~5:1 pour le texte secondaire sur le fond rose),
-  largement au-dessus du minimum WCAG AA malgré la teinte plus douce.
-- Charte graphique — statuts colorés sur le suivi adulte (`adulte/suivi.html.twig`,
-  tableau « Sessions récentes ») : les 4 valeurs de `StatutSession` (générée, en attente
-  de relecture, validée, jouée) affichaient juste le libellé brut de l'enum en texte
-  noir. Remplacé par une pastille colorée : vert pour validée (prête pour l'enfant),
-  ambre pour à relire (action à faire), bleu adulte pour jouée (terminée), gris neutre
-  pour générée (état transitoire, rarement visible en pratique). Contrastes vérifiés
-  (>5.7:1 sur les 4).

@@ -15,14 +15,26 @@
             </div>
         {% endif %}
 
-        <h1 style="font-size:23px; margin:0;">Bien joué pour cet exercice&nbsp;!</h1>
+        <div>
+            <h1 style="font-size:23px; margin:0;">Bien joué pour cet exercice&nbsp;!</h1>
+            <p style="font-size:14.5px; color:var(--ink-soft); margin:4px 0 0;">Voici ce que le correcteur a noté pour toi.</p>
+        </div>
 
         {% for question in texte.questions %}
             {% set reponse = question.reponse %}
             {% set estCorrecte = reponse and reponse.correcte.value == 'oui' %}
-            <div class="card" style="border-color: {{ estCorrecte ? 'var(--success)' : 'var(--amber)' }}; background: {{ estCorrecte ? 'oklch(95% 0.03 148)' : 'oklch(95% 0.03 75)' }};">
-                <div style="font-weight:700; margin-bottom:8px;">
-                    Question {{ loop.index }} — {{ estCorrecte ? 'C\'est ça !' : 'Presque !' }}
+            <div class="card" style="border-width:1.5px; border-color: {{ estCorrecte ? 'var(--success)' : 'var(--amber)' }}; background: {{ estCorrecte ? 'oklch(95% 0.03 148)' : 'oklch(95% 0.03 75)' }};">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                    <div style="width:26px; height:26px; border-radius:50%; background:{{ estCorrecte ? 'var(--success)' : 'var(--amber)' }}; display:flex; align-items:center; justify-content:center; flex:none;">
+                        {% if estCorrecte %}
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"></path></svg>
+                        {% else %}
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="8" x2="12" y2="13"></line><circle cx="12" cy="16.5" r="0.9" fill="white" stroke="none"></circle></svg>
+                        {% endif %}
+                    </div>
+                    <div style="font-weight:700; font-size:15.5px;">
+                        Question {{ loop.index }} — {{ estCorrecte ? 'C\'est ça !' : 'Presque !' }}
+                    </div>
                 </div>
                 {% if reponse and reponse.contenuEnfant|trim is not empty %}
                     <p style="margin:0 0 8px; font-size:13.5px; color:var(--ink-soft);">

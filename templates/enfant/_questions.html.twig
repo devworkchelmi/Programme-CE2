@@ -5,6 +5,32 @@
     Cas limite §2.2 : tant qu'une réponse manque, la validation est désactivée avec un
     message doux — jamais une erreur bloquante.
 #}
+<style>
+    /* Options QCM stylisées (cf. maquette Diagnostic/Exercice, 01-parcours-produit-maquettes) :
+       cercle personnalisé qui se remplit, bordure et fond accentués quand sélectionnée. */
+    .qcm-option {
+        display: flex; align-items: center; gap: 12px; padding: 13px 16px;
+        border: 1.5px solid var(--border); border-radius: 12px; background: var(--surface);
+        cursor: pointer; transition: border-color .12s, background-color .12s, padding .12s;
+    }
+    .qcm-option:has(.qcm-radio:checked) {
+        border: 2px solid var(--accent); background: var(--accent-soft); padding: 12px 15px;
+    }
+    .qcm-cercle {
+        width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border);
+        flex: none; display: flex; align-items: center; justify-content: center;
+    }
+    .qcm-radio:checked ~ .qcm-cercle { border-color: var(--accent); }
+    .qcm-cercle::after {
+        content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
+        transform: scale(0); transition: transform .1s;
+    }
+    .qcm-radio:checked ~ .qcm-cercle::after { transform: scale(1); }
+    .qcm-radio {
+        position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden;
+        clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; padding: 0;
+    }
+</style>
 <form method="post" action="{{ path('enfant_exercice_repondre', {id: session.id}) }}"
       data-formulaire-reponses style="display:flex; flex-direction:column; gap:18px;">
     {% for question in texte.questions %}
@@ -16,10 +42,12 @@
 
             {% if question.type.value == 'qcm' %}
                 {% for choixItem in question.choix %}
-                    <label class="card" style="display:flex; align-items:center; gap:12px; cursor:pointer;">
+                    <label class="qcm-option" style="position:relative;">
                         <input type="radio" name="reponse_{{ question.id }}" value="{{ choixItem }}"
+                               class="qcm-radio"
                                {% if loop.first %}id="reponse_{{ question.id }}"{% endif %} data-champ-reponse>
-                        {{ choixItem }}
+                        <span class="qcm-cercle" aria-hidden="true"></span>
+                        <span style="font-size:14.5px;">{{ choixItem }}</span>
                     </label>
                 {% endfor %}
             {% else %}
