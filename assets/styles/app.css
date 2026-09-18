@@ -1,0 +1,8 @@
+/* Ce fichier n'est pas utilisé pour l'instant : la charte visuelle de l'app
+   (couleurs, typographies) vient des variables CSS définies directement dans
+   templates/base.html.twig, reprises du canevas de design validé.
+
+   AssetMapper ne compile pas le Sass (pas de préprocesseur) : ce fichier est
+   donc en CSS pur (remplace l'ancien assets/styles/app.scss de Webpack Encore).
+   Pour ajouter une dépendance front (ex. Bootstrap) : `bin/console importmap:require bootstrap`,
+   qui ajoute automatiquement l'entrée dans importmap.php. */

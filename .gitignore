@@ -15,12 +15,14 @@
 **/.env.local.php
 **/.env.*.local
 
-###> symfony/webpack-encore-bundle ###
-/node_modules/
+###> symfony/asset-mapper ###
+/public/assets/
+/assets/vendor/
+###< symfony/asset-mapper ###
+
+# Anciens artefacts de build Webpack Encore (public/build/) — plus générés depuis le
+# passage à AssetMapper, mais un dossier existant localement ne doit pas être suivi.
 /public/build/
-npm-debug.log
-yarn-error.log
-###< symfony/webpack-encore-bundle ###
 
 ###> phpunit/phpunit ###
 /phpunit.xml

@@ -93,6 +93,9 @@
         .btn-sm { padding: 8px 16px; font-size: 13px; }
     </style>
     {% block stylesheets %}{% endblock %}
+    {# AssetMapper (remplace Webpack Encore) : sert assets/app.js (+ tout CSS qu'il
+       importerait) directement, sans build ni npm. Voir importmap.php. #}
+    {{ importmap('app') }}
 </head>
 {% set route = app.request.attributes.get('_route') %}
 <body class="{{ route starts with 'adulte' ? 'theme-adulte' : '' }}">
@@ -131,5 +134,6 @@
 </div>
 
 {% block javascripts %}{% endblock %}
+            {% block importmap %}{{ importmap('app') }}{% endblock %}
 </body>
 </html>

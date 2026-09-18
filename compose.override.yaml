@@ -1,0 +1,6 @@
+# Fichier volontairement vide : l'override "database: ports: [5432]" venait du recipe
+# Flex doctrine/doctrine-bundle initial (pensé pour Postgres) et n'a jamais servi depuis
+# le passage à MariaDB — le vrai port (3307) est déjà déclaré dans docker-compose.yml.
+# `docker compose` fonctionne normalement avec ce fichier vide ; il peut aussi être
+# supprimé sans risque si tu préfères.
+services: {}

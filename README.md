@@ -13,8 +13,10 @@ ce qu'il reste à affiner — voir en particulier `AdulteController` et `EnfantC
 
 - PHP 8.2+ et Composer (pour lancer les commandes en dehors de Docker si tu préfères)
 - Docker Desktop
-- Node.js + npm (pour les assets front — Encore/Stimulus)
 - Une clé API Claude sur [console.anthropic.com](https://console.anthropic.com)
+
+Pas de Node.js/npm requis — les assets front sont gérés par AssetMapper (cf. plus bas),
+pas par un build JS séparé.
 
 ## Installation
 
@@ -37,14 +39,31 @@ docker compose exec php bin/console doctrine:migrations:migrate
 # 5. Comptes de départ (un seul adulte, un seul enfant pour le MVP)
 docker compose exec php bin/console app:creer-adulte parent@example.com
 docker compose exec php bin/console app:creer-enfant "Prénom de l'enfant"
-
-# 6. Assets front
-npm install
-npm run watch
 ```
 
 L'app est ensuite disponible sur http://localhost:8000 (connexion avec le compte
-adulte créé à l'étape 5).
+adulte créé à l'étape 5) — aucune étape d'assets front à lancer, AssetMapper sert
+`assets/app.js` tel quel en dev.
+
+## Assets front (AssetMapper — remplace Webpack Encore)
+
+Plus de `npm install` / `npm run watch` : Symfony sert directement les fichiers de
+`assets/` (JS, CSS) via `importmap.php`, sans étape de build ni de watcher. Pour
+ajouter une dépendance JS (ex. une lib npm) :
+
+```bash
+docker compose exec php bin/console importmap:require nom-du-paquet
+```
+
+Ça télécharge le fichier (par défaut depuis jsDelivr) et ajoute l'entrée dans
+`importmap.php` — rien à installer côté Node. `bin/console importmap:outdated` liste
+les mises à jour disponibles. En prod, `bin/console asset-map:compile` compile les
+assets en fichiers versionnés dans `public/assets/` (nginx les sert alors tels quels,
+sans changement de config — `try_files` retombe déjà sur PHP pour tout le reste).
+
+Les contrôleurs Stimulus (`assets/controllers/*_controller.js`) sont auto-découverts
+comme avant, juste chargés via `@symfony/stimulus-bundle` au lieu de
+`@symfony/stimulus-bridge` — aucun changement à faire sur les contrôleurs eux-mêmes.
 
 ## Mode démo (sans appel API, sans crédit consommé)
 
@@ -188,3 +207,24 @@ Ils ne nécessitent pas de base de données.
   ambre pour à relire (action à faire), bleu adulte pour jouée (terminée), gris neutre
   pour générée (état transitoire, rarement visible en pratique). Contrastes vérifiés
   (>5.7:1 sur les 4).
+- Migration Webpack Encore → AssetMapper : `symfony/webpack-encore-bundle` désinstallé,
+  remplacé par `symfony/asset-mapper` + `symfony/stimulus-bundle` (successeur de
+  `@symfony/stimulus-bridge` pour AssetMapper). `webpack.config.js`, `package.json`,
+  `package-lock.json` et `config/packages/webpack_encore.yaml` supprimés ; nouveaux
+  `config/packages/asset_mapper.yaml` et `importmap.php` (racine du projet).
+  `assets/bootstrap.js` réécrit pour `startStimulusApp()` sans argument (API
+  stimulus-bundle) ; `assets/styles/app.scss` renommé en `app.css` (AssetMapper ne
+  compile pas le Sass — le fichier n'avait de toute façon aucune règle Sass active).
+  `{{ importmap('app') }}` ajouté dans `<head>` de `base.html.twig` (aucun template
+  n'appelait `encore_entry_*_tags` jusqu'ici, donc rien d'autre à modifier côté vues).
+  `.gitignore` : bloc `webpack-encore-bundle` remplacé par le bloc `asset-mapper`
+  (`/public/assets/`, `/assets/vendor/`). Plus besoin de Node/npm ni de `npm run watch`
+  (cf. Prérequis et section « Assets front » plus haut) — aucun changement nginx requis,
+  `try_files` retombait déjà sur PHP pour toute URL sans fichier physique correspondant.
+  Migration exécutée et vérifiée : `composer update symfony/webpack-encore-bundle
+  symfony/asset-mapper symfony/stimulus-bundle` puis `cache:clear` passent, la page de
+  connexion charge tous ses assets (JS/CSS) en 200 depuis `public/assets/`, sans build npm.
+  Nettoyage complémentaire : anciens artefacts de build Encore (`public/build/`, désormais
+  ignoré par git, cf. `.gitignore`) supprimables sans risque s'ils sont encore présents en
+  local ; override Docker `compose.override.yaml` vidé (portait un port Postgres du recipe
+  Flex initial, jamais utilisé depuis le passage à MariaDB).
