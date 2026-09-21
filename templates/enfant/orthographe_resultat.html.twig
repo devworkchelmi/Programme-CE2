@@ -1,0 +1,42 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Résultat — Orthographe — Carnet CE2{% endblock %}
+
+{% block body %}
+    {% set estCorrecte = exercice.correcte.value == 'oui' %}
+    {% set contenu = exercice.contenu %}
+    <div style="display:flex; flex-direction:column; gap:20px;">
+        <div class="card" style="border-width:1.5px; border-color: {{ estCorrecte ? 'var(--success)' : 'var(--amber)' }}; background: {{ estCorrecte ? 'oklch(95% 0.03 148)' : 'oklch(95% 0.03 75)' }};">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                <div style="width:30px; height:30px; border-radius:50%; background:{{ estCorrecte ? 'var(--success)' : 'var(--amber)' }}; display:flex; align-items:center; justify-content:center; flex:none;">
+                    {% if estCorrecte %}
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"></path></svg>
+                    {% else %}
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="8" x2="12" y2="13"></line><circle cx="12" cy="16.5" r="0.9" fill="white" stroke="none"></circle></svg>
+                    {% endif %}
+                </div>
+                <h1 style="font-size:20px; margin:0;">{{ estCorrecte ? 'C\'est ça !' : 'Presque !' }}</h1>
+            </div>
+
+            <p style="margin:0 0 6px; font-size:13.5px; color:var(--ink-soft);">
+                Ta réponse : « {{ exercice.reponseDonnee[0]|default('') }} »
+            </p>
+
+            {% if not estCorrecte %}
+                {% if exercice.type.value == 'correction' %}
+                    <p style="margin:0;">La phrase bien écrite était&nbsp;: <strong>{{ contenu.phrase_correcte }}</strong></p>
+                {% else %}
+                    <p style="margin:0;">Le bon mot était&nbsp;: <strong>{{ contenu.reponse }}</strong></p>
+                {% endif %}
+            {% elseif exercice.type.value != 'correction' %}
+                <p style="margin:0;">Bravo, c'est exactement ça !</p>
+            {% endif %}
+        </div>
+
+        <div class="card" style="border-style:dashed; font-size:13px; color:var(--ink-soft);">
+            {{ exercice.regle }} — le niveau de tes prochains exercices s'ajuste automatiquement.
+        </div>
+
+        <a href="{{ path('enfant_orthographe_accueil') }}" class="btn">Continuer</a>
+    </div>
+{% endblock %}

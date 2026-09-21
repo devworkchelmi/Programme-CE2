@@ -5,6 +5,13 @@ services:
       dockerfile: docker/php/Dockerfile
     volumes:
       - .:/var/www/carnet-ce2:cached
+      # var/cache et var/log sur des volumes Docker natifs plutôt que sur le bind mount
+      # Windows/OneDrive : Symfony en mode dev réécrit énormément de petits fichiers de
+      # cache à chaque requête, et faire transiter ça par le partage de fichiers hôte
+      # (a fortiori dans un dossier synchronisé OneDrive) est ce qui rend le rechargement
+      # extrêmement lent. Ici ces écritures restent dans la VM Linux de Docker.
+      - var_cache:/var/www/carnet-ce2/var/cache
+      - var_log:/var/www/carnet-ce2/var/log
     depends_on:
       - database
     environment:
@@ -34,3 +41,5 @@ services:
 
 volumes:
   database_data:
+  var_cache:
+  var_log:

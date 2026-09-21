@@ -89,6 +89,37 @@ les règles de diagnostic (§4) et d'ajustement (§5) restent donc testables pou
 Repasser en réel : `APP_LLM_FAKE=0` dans `.env.local` (ou supprimer la ligne), puis
 vider le cache.
 
+## Performance (rechargement lent en dev)
+
+Si les pages sont très longues à charger/recharger en local, la cause la plus probable
+n'est pas Symfony mais l'environnement Windows + Docker Desktop + OneDrive :
+
+- **`var/cache` et `var/log` sur des volumes Docker nommés** (déjà fait dans
+  `docker-compose.yml`, plus dans le bind mount) : Symfony en mode dev réécrit des
+  centaines de petits fichiers de cache à chaque requête, et faire transiter ça par le
+  partage de fichiers hôte↔conteneur (a fortiori dans un dossier synchronisé OneDrive)
+  est souvent la cause principale de lenteur perçue au rechargement. Nécessite de
+  reconstruire l'image après avoir récupéré ce changement :
+  `docker compose up -d --build` (puis `docker compose exec php bin/console cache:clear`
+  si besoin).
+- **OPcache réglé pour le dev** (`docker/php/opcache.ini`) : cache de fichiers assez
+  grand pour tout `vendor/` + `src/`, et cache des chemins réels (`realpath_cache_size`)
+  pour réduire les appels `stat()` — coûteux sur un volume monté.
+- **Le plus gros gain possible, à faire toi-même** : le dossier du projet est actuellement
+  dans `OneDrive\Bureau\CE2App`. OneDrive synchronise/scanne en continu tous les fichiers
+  (y compris `vendor/`, des milliers de petits fichiers), et si « Fichiers à la demande »
+  est actif, certains fichiers peuvent même être téléchargés à la volée au premier accès —
+  ça peut suffire à expliquer un rechargement « extrêmement long ». Deux options, du plus
+  simple au plus efficace :
+  1. Sortir le dossier `carnet-ce2` d'OneDrive (ex. `C:\Dev\carnet-ce2`) — supprime la
+     synchronisation/scan en continu, sans rien changer au workflow.
+  2. Si Docker Desktop utilise le moteur WSL2 (Paramètres → Général), déplacer le projet
+     dans le système de fichiers Linux natif (`\\wsl$\...` plutôt que `C:\...`) : les
+     accès fichiers entre un conteneur et un dossier Windows monté (bind mount) passent
+     par une couche de partage nettement plus lente que l'accès natif WSL2 ↔ conteneur.
+     C'est le changement le plus efficace, mais demande d'adapter l'IDE (VS Code →
+     extension « Remote - WSL »).
+
 ## Tests
 
 ```bash
@@ -228,3 +259,37 @@ Ils ne nécessitent pas de base de données.
   ignoré par git, cf. `.gitignore`) supprimables sans risque s'ils sont encore présents en
   local ; override Docker `compose.override.yaml` vidé (portait un port Postgres du recipe
   Flex initial, jamais utilisé depuis le passage à MariaDB).
+- **Nouvelle partie « Orthographe »** (CE2, indépendante de la compréhension de texte) :
+  trois formats d'exercice — texte à trous (mot manquant à écrire), correction (une
+  phrase fautive à réécrire) et choix de mot (QCM parmi plusieurs propositions). À la
+  différence de la compréhension, le contenu vient d'une banque de règles/mots fixe
+  (`BanqueExercicesService` : pluriels, accords sujet-verbe, homophones grammaticaux
+  a/à, et/est, on/ont, son/sont, ou/où, ce/se, ces/ses, c'est/s'est... répartis sur les
+  niveaux 1 à 6) plutôt que d'un appel LLM — pas de relecture adulte nécessaire, l'enfant
+  y accède directement depuis le nouveau lien « Orthographe » du menu. Correction
+  déterministe (`CorrectionService`, pas d'appel API) ; niveau propre à cette partie
+  (`Enfant.niveauOrthographe`, migration `Version20260918130617`), ajusté avec la même
+  règle que la compréhension (`AjustementService::calculer()`, réutilisé tel quel).
+  Nouvelles entités `ExerciceOrthographe` et `AjustementNiveauOrthographe`, contrôleur
+  `OrthographeController` (`/orthographe`, `/orthographe/demarrer`,
+  `/orthographe/{id}[/repondre|/resultat]`), templates `enfant/orthographe_*.html.twig`,
+  et un petit bloc niveau + historique ajouté au suivi adulte existant.
+- **Correctif du correcteur orthographique de démonstration** (`FakeClaudeClient`,
+  mode `APP_LLM_FAKE=1`) : sur une réponse rédigée de compréhension, deux défauts
+  produisaient de fausses corrections — le vocabulaire de référence incluait les mots de
+  consigne du critère d'évaluation (« la réponse doit **dire** que... »), ce qui pouvait
+  rapprocher à tort un vrai mot de la réponse d'un mot de consigne (ex. « lire » signalé
+  comme faute de « dire ») ; et la correction affichée était la forme interne sans
+  accents utilisée pour comparer, pas la vraie orthographe (« touchee » au lieu de
+  « touchée »). Les mots de consigne (`MOTS_DE_CONSIGNE`) sont maintenant exclus du
+  vocabulaire de référence, et la forme d'origine (accentuée) de chaque mot est
+  conservée pour l'affichage (`motsSignificatifsAvecOriginal()`).
+- **Rechargement lent en dev** (cf. section Performance plus haut) : `var/cache` et
+  `var/log` passent du bind mount `.:/var/www/carnet-ce2` à des volumes Docker nommés
+  (`var_cache`, `var_log` dans `docker-compose.yml`) — évite que la réécriture massive du
+  cache Symfony à chaque requête transite par le partage de fichiers Windows/OneDrive.
+  `docker/php/Dockerfile` crée ces deux dossiers appartenant à `www-data` avant le premier
+  montage du volume (Docker recopie le contenu — et les droits — de l'image dans un
+  volume nommé vide). Ajout de `docker/php/opcache.ini` (cache de fichiers et de chemins
+  réels dimensionné pour tout `vendor/` + `src/`). Nécessite un rebuild de l'image
+  (`docker compose up -d --build`) pour prendre effet.

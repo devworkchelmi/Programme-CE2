@@ -107,6 +107,7 @@
     {% if app.user %}
         <nav class="navbar">
             <a href="{{ path('adulte_suivi') }}" class="nav-link {{ route starts with 'adulte_suivi' ? 'active' : '' }}">Suivi</a>
+            <a href="{{ path('enfant_orthographe_accueil') }}" class="nav-link {{ route starts with 'enfant_orthographe' ? 'active' : '' }}">Orthographe</a>
             {# D'autres liens (historique des relectures, réglages...) viendront ici au fil des écrans #}
         </nav>
 
@@ -134,6 +135,5 @@
 </div>
 
 {% block javascripts %}{% endblock %}
-            {% block importmap %}{{ importmap('app') }}{% endblock %}
 </body>
 </html>

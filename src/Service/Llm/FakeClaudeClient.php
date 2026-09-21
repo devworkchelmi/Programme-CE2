@@ -193,7 +193,11 @@ class FakeClaudeClient implements ClaudeClientInterface
 
     /**
      * Vocabulaire de consigne présent dans les critères d'évaluation, sans valeur de
-     * contenu : ignoré au moment de comparer la réponse de l'enfant aux attentes.
+     * contenu : ignoré au moment de comparer la réponse de l'enfant aux attentes, et
+     * aussi (cf. vocabulaireReference()) au moment de chercher une faute d'orthographe —
+     * un mot de la réponse d'un seul cran de plus près d'un mot de consigne que d'un
+     * vrai mot du texte n'est pas une faute (ex. "lire" ne doit jamais être proposé
+     * comme une faute de "dire").
      *
      * @var list<string>
      */
@@ -389,7 +393,7 @@ class FakeClaudeClient implements ClaudeClientInterface
             : '';
         $attendue = $this->extraire('/Réponse attendue ou critères\s*:\s*(.*)$/mu', $prompt);
 
-        $vocabulaire = array_merge($this->motsSignificatifs($texte), $this->motsSignificatifs($attendue));
+        $vocabulaire = $this->vocabulaireReference($texte, $attendue);
         $corrections = [];
 
         foreach (preg_split('/[^\p{L}\p{N}]+/u', $donnee, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $motEcrit) {
@@ -408,15 +412,19 @@ class FakeClaudeClient implements ClaudeClientInterface
             // La détection par proximité, elle, ne s'applique qu'aux mots assez longs :
             // sur des mots courts, une lettre d'écart désigne trop souvent un autre mot
             // parfaitement correct.
-            if (mb_strlen($motEcrit) < 4 || in_array($normalise, $vocabulaire, true)) {
+            if (mb_strlen($motEcrit) < 4 || isset($vocabulaire[$normalise])) {
                 continue;
             }
 
-            foreach ($vocabulaire as $motReference) {
-                if (1 !== levenshtein($normalise, $motReference) || $this->memeMotAccordeOuAccentue($normalise, $motReference)) {
+            foreach ($vocabulaire as $normaliseReference => $motReference) {
+                if (1 !== levenshtein($normalise, $normaliseReference) || $this->memeMotAccordeOuAccentue($normalise, $normaliseReference)) {
                     continue;
                 }
 
+                // $motReference garde sa forme d'origine (accents, casse) : $normalise et
+                // $normaliseReference ne servent qu'à comparer, jamais à être affichés
+                // (cf. bug du 2026-09-18 — une correction affichée sans accent, "touchee"
+                // au lieu de "touchée").
                 $corrections[$motEcrit] = $motReference;
                 break;
             }
@@ -428,6 +436,31 @@ class FakeClaudeClient implements ClaudeClientInterface
         }
 
         return $resultat;
+    }
+
+    /**
+     * Vocabulaire de référence du correcteur de démonstration : mots significatifs du
+     * texte et du critère d'évaluation, moins les mots de consigne (« dire »,
+     * « expliquer »...), qui ne sont qu'un artefact du critère et jamais un vrai mot du
+     * texte lu par l'enfant — les y comparer produit de fausses corrections (cf. bug du
+     * 2026-09-18 : "lire" rapproché à tort de "dire", lui-même tiré de « la réponse doit
+     * dire que... »).
+     *
+     * @return array<string, string> forme normalisée (sans accents, comparaison
+     *                                uniquement) => forme d'origine (à afficher)
+     */
+    private function vocabulaireReference(string $texte, string $attendue): array
+    {
+        $vocabulaire = array_merge(
+            $this->motsSignificatifsAvecOriginal($texte),
+            $this->motsSignificatifsAvecOriginal($attendue),
+        );
+
+        foreach (self::MOTS_DE_CONSIGNE as $motDeConsigne) {
+            unset($vocabulaire[$motDeConsigne]);
+        }
+
+        return $vocabulaire;
     }
 
     /**
@@ -469,5 +502,32 @@ class FakeClaudeClient implements ClaudeClientInterface
             $mots,
             static fn (string $mot): bool => mb_strlen($mot) > 3,
         )));
+    }
+
+    /**
+     * Comme motsSignificatifs(), mais conserve la forme d'origine (accents, casse) de
+     * chaque mot pour pouvoir l'afficher dans une correction — motsSignificatifs() ne
+     * renvoie que la forme normalisée, qui ne doit servir qu'à comparer (cf. bug du
+     * 2026-09-18 ci-dessus).
+     *
+     * @return array<string, string> forme normalisée => forme d'origine (en minuscules,
+     *                                accents conservés ; le premier mot rencontré pour
+     *                                une forme normalisée donnée est gardé)
+     */
+    private function motsSignificatifsAvecOriginal(string $texte): array
+    {
+        $mots = preg_split('/[^\p{L}\p{N}]+/u', $texte, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $vocabulaire = [];
+
+        foreach ($mots as $mot) {
+            if (mb_strlen($mot) <= 3) {
+                continue;
+            }
+
+            $normalise = $this->normaliser($mot);
+            $vocabulaire[$normalise] ??= mb_strtolower($mot, 'UTF-8');
+        }
+
+        return $vocabulaire;
     }
 }

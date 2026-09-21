@@ -26,6 +26,13 @@ class Enfant
     private int $niveauActuel = 1;
 
     /**
+     * Niveau (1-6) propre à la partie « Orthographe », distinct de niveauActuel
+     * (compréhension de texte) — ajusté avec la même règle (cf. OrthographeController).
+     */
+    #[ORM\Column]
+    private int $niveauOrthographe = 1;
+
+    /**
      * Passe à true une fois le diagnostic initial terminé (cf. Product Specification §4) —
      * tant que c'est false, AdulteController::demarrerSession() propose le lot de textes
      * de diagnostic plutôt qu'une session standard.
@@ -72,6 +79,18 @@ class Enfant
     public function setNiveauActuel(int $niveauActuel): static
     {
         $this->niveauActuel = max(1, min(6, $niveauActuel));
+
+        return $this;
+    }
+
+    public function getNiveauOrthographe(): int
+    {
+        return $this->niveauOrthographe;
+    }
+
+    public function setNiveauOrthographe(int $niveauOrthographe): static
+    {
+        $this->niveauOrthographe = max(1, min(6, $niveauOrthographe));
 
         return $this;
     }

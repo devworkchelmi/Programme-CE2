@@ -11,6 +11,7 @@ use App\Entity\Question;
 use App\Entity\Session;
 use App\Entity\TexteGenere;
 use App\Repository\EnfantRepository;
+use App\Repository\ExerciceOrthographeRepository;
 use App\Repository\ReponseRepository;
 use App\Repository\SessionRepository;
 use App\Service\AjustementService;
@@ -41,6 +42,7 @@ class AdulteController extends AbstractController
         EnfantRepository $enfantRepository,
         SessionRepository $sessionRepository,
         ReponseRepository $reponseRepository,
+        ExerciceOrthographeRepository $exerciceOrthographeRepository,
         AjustementService $ajustementService,
     ): Response {
         $enfants = $enfantRepository->findBy([], ['id' => 'ASC']);
@@ -71,6 +73,12 @@ class AdulteController extends AbstractController
             ? $reponseRepository->avecCorrectionsOrthographe($enfant, 10)
             : [];
 
+        // Partie « Orthographe » (module séparé, cf. OrthographeController) : niveau et
+        // historique propres à cette partie, distincts du niveau de compréhension ci-dessus.
+        $exercicesOrthographeRecents = $enfant instanceof Enfant
+            ? $exerciceOrthographeRepository->lesPlusRecentsRepondus($enfant, 5)
+            : [];
+
         return $this->render('adulte/suivi.html.twig', [
             'enfant' => $enfant,
             'enfants' => $enfants,
@@ -80,6 +88,7 @@ class AdulteController extends AbstractController
             'tendanceLabel' => $this->libelleTendance($tendance),
             'reponsesAConfirmer' => $reponsesAConfirmer,
             'orthographeRecente' => $orthographeRecente,
+            'exercicesOrthographeRecents' => $exercicesOrthographeRecents,
         ]);
     }
 

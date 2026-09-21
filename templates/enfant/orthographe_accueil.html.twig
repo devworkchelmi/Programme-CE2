@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Orthographe — Carnet CE2{% endblock %}
+
+{% block body %}
+    <div style="display:flex; flex-direction:column; gap:20px;">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+            <div>
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;">
+                    <path d="M4 20h16"></path>
+                    <path d="M6 20V10l6-6 6 6v10"></path>
+                    <path d="M10 20v-6h4v6"></path>
+                </svg>
+                <div style="font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft);">
+                    Orthographe
+                </div>
+                <h1 style="font-size:24px; margin:6px 0 0;">On révise l'orthographe&nbsp;?</h1>
+                <p style="color:var(--ink-soft); margin:4px 0 0;">
+                    Des petits exercices pour s'entraîner&nbsp;: un mot à trouver, une phrase à corriger,
+                    ou un mot à choisir parmi plusieurs.
+                </p>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:6px; background:var(--accent-soft); color:var(--accent); font-family:'Baloo 2'; font-weight:700; font-size:13px; padding:9px 15px; border-radius:99px; flex:none;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none"><polygon points="12,2.5 14.9,9.1 22,9.9 16.7,14.6 18.3,21.5 12,17.8 5.7,21.5 7.3,14.6 2,9.9 9.1,9.1"></polygon></svg>
+                Niveau {{ enfant.niveauOrthographe }}
+            </div>
+        </div>
+
+        <form method="post" action="{{ path('enfant_orthographe_demarrer') }}">
+            <button class="btn" type="submit">Commencer un exercice</button>
+        </form>
+
+        {% if derniersExercices is not empty %}
+            <div class="card">
+                <div style="font-family:'Baloo 2'; font-size:16px; margin-bottom:12px;">Derniers exercices</div>
+                {% set libellesType = {'texte_a_trous': 'Texte à trous', 'correction': 'Correction', 'choix_mot': 'Choix de mot'} %}
+                {% for exercice in derniersExercices %}
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid var(--border);">
+                        <div>
+                            <div style="font-size:13.5px; font-weight:700;">{{ exercice.regle }}</div>
+                            <div style="font-size:12px; color:var(--ink-soft);">{{ libellesType[exercice.type.value] }} — {{ exercice.dateReponse|date('d/m/Y') }}</div>
+                        </div>
+                        <span style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:{{ exercice.correcte.value == 'oui' ? 'var(--success)' : 'var(--amber)' }}; flex:none;">
+                            {% if exercice.correcte.value == 'oui' %}
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"></path></svg>
+                            {% else %}
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"><line x1="12" y1="8" x2="12" y2="13"></line><circle cx="12" cy="16.5" r="0.9" fill="white" stroke="none"></circle></svg>
+                            {% endif %}
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
